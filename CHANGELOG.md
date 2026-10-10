@@ -4,7 +4,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
-- **Antigravity** (ADR-011): quota pools read from the desktop app's local language server (`GetUserStatus` on 127.0.0.1) while Antigravity is running. Models are grouped into pools (e.g. "Claude + GPT-OSS models", weekly; "Gemini models", ~5h). It's the first step of every refresh and needs no Chrome. In the menu bar it shows as ⇧.
+- **Antigravity** (ADR-011): quota pools read from the desktop app's local language server (`GetUserStatus` on 127.0.0.1) while Antigravity is running. Models are grouped into pools (e.g. "Claude + GPT-OSS models", weekly; "Gemini models", ~5h). It's the first step of every refresh and needs no Chrome. In the menu bar it shows as ⇧, **replacing Gemini**, which stays on the dashboard.
 - **App icon** ("reset ring": a usage ring with clock hands). Source is `assets/icon.svg`; `npm run build:icon` renders every macOS size with headless Chrome and packs `menubar/AppIcon.icns` with `iconutil`, and `build:menubar` bundles it.
 - MIT license.
 - README screenshots (`docs/images/`), generated from demo data by `npm run screenshots` (dashboard light/dark, menu bar panel, menu bar glyphs).

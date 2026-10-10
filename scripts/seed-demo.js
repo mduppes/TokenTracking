@@ -19,6 +19,8 @@ const meters = [
   { provider: 'gemini', id: 'daily', label: 'Pro model daily limit', window: 'daily', resetIn: 7 * H, end: 35, staleBy: 3 * H }, // shows the stale notice
   { provider: 'cursor', id: 'grok-bot', label: 'Grok Bot', window: 'weekly', resetIn: 100 * H, end: 18 },
   { provider: 'muse', id: 'weekly-tokens', label: 'Weekly tokens', window: 'weekly', resetIn: 30 * H, end: 100 },
+  { provider: 'antigravity', id: 'pool-claude-gpt-oss', label: 'Claude + GPT-OSS models', window: 'weekly', resetIn: 118 * H, end: 51, plan: 'Pro' },
+  { provider: 'antigravity', id: 'pool-gemini', label: 'Gemini models', window: 'session', resetIn: 4 * H, end: 12 },
 ];
 const WIN_H = { session: 5, daily: 24, weekly: 168, monthly: 730 };
 

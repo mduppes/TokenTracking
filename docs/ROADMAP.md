@@ -10,6 +10,16 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 - [ ] Menu bar: choose which meter drives the title, or pin one.
 - [ ] Optional: port the service to Swift inside the app (no Node at all): SQLite via libsqlite3, CDP over a pipe, the panel rendered natively.
 
+## More AI services (backlog)
+Candidates, to be checked for a usage page or local source first. Same rules as the others: read in-page with the headless profile, no API keys.
+- [ ] **OpenAI: ChatGPT** (Plus/Pro message and model limits) and **Codex** (5h + weekly limits; the Codex CLI also logs usage locally). Check chatgpt.com settings for a usage view.
+- [ ] **GitHub Copilot**: premium-request allowance per month (github.com billing/usage pages).
+- [ ] **Perplexity**: Pro search / research limits.
+- [ ] **Windsurf** and **Kiro**: credit-based plans with dashboards.
+- [ ] **Mistral Le Chat**, **DeepSeek**: message limits if exposed.
+- [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
+- [ ] Menu bar: let the user choose which services get a slot (today it's the `MenuBarGlyphs.services` list in the Swift app).
+
 ## Done
 - [x] Headless refresh verified for Claude, Cursor + Grok Bot, Gemini, Muse (2026-10-10)
 - [x] macOS menu bar app that starts and stops the service; Dock fallback when the menu bar is full (2026-10-10)

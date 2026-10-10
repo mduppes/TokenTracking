@@ -38,7 +38,7 @@ No API keys, no accounts, no cloud, no browser extension.
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
 - **Menu bar app:**
-  - **Title:** one icon and % per service, e.g. `✳74 ➚70 ✕86 Ⓜ97 ✦0`. Each number is that service's worst meter, `––` means at the limit, and hovering shows details.
+  - **Title:** one icon and % per service, e.g. `✳74 ➚70 ✕86 Ⓜ97 ⇧51`. Each number is that service's worst meter, `––` means at the limit, and hovering shows details.
   - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
   - **Lifecycle:** it starts and stops everything it needs.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
@@ -72,7 +72,7 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 ### The menu bar app
 
 - **What it shows:** one icon per service, each with a digit for that service's worst meter:
-  - **Icons:** ✳ Claude, ➚ Cursor, ✕ Grok Bot, Ⓜ Muse, ✦ Gemini, ⇧ Antigravity.
+  - **Icons:** ✳ Claude, ➚ Cursor, ✕ Grok Bot, Ⓜ Muse, ⇧ Antigravity. Gemini is only on the dashboard (its limits rarely matter); change `MenuBarGlyphs.services` to pick your own.
   - **The number** is the % used (0–99), `––` = at the limit, `??` = no reading yet.
   - **Hover** for exact numbers and the most at-risk meter. Click for the compact dashboard.
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.

@@ -58,7 +58,7 @@ try {
   const swiftFile = join(home, 'glyphs.swift');
   writeFileSync(swiftFile, `import AppKit
 ${glyphs}
-let slots = [("asterisk", 77.0), ("cursorarrow", 64), ("xmark", 18), ("m.circle", 100), ("sparkle", 34)]
+let slots = [("asterisk", 77.0), ("cursorarrow", 64), ("xmark", 18), ("m.circle", 100), ("arrow.up.circle", 51)]
   .map { MenuSlot(symbol: $0.0, text: MenuBarGlyphs.digits($0.1)) }
 let glyph = MenuBarGlyphs.image(for: slots)
 let s: CGFloat = 2, pad: CGFloat = 14, band: CGFloat = 26

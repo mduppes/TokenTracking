@@ -167,12 +167,12 @@ struct MenuSlot: Equatable {
 
 enum MenuBarGlyphs {
     /// Services shown in the menu bar, in order. Grok Bot is a separate limit inside Cursor.
+    /// Gemini is deliberately left out (its app limits stay near 0% for this user); it's still on the dashboard.
     static let services: [(id: String, symbol: String, name: String, matches: (String, String) -> Bool)] = [
         ("claude", "asterisk", "Claude", { p, _ in p == "claude" }),
         ("cursor", "cursorarrow", "Cursor", { p, m in p == "cursor" && m != "grok-bot" }),
         ("grok-bot", "xmark", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
         ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
-        ("gemini", "sparkle", "Gemini", { p, _ in p == "gemini" }),
         ("antigravity", "arrow.up.circle", "Antigravity", { p, _ in p == "antigravity" }),
     ]
 
