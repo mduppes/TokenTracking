@@ -32,12 +32,17 @@ function budgetText(m) {
   return null;
 }
 
+/** Countdown pill: the most prominent thing on a meter is when it frees up (option A). */
+function resetPill(m) {
+  const p = m.pace;
+  if (p.remainingMs == null) return `<span class="pill pill-unknown" title="${esc(m.resetText || 'Reset time unknown')}"><span aria-hidden="true">↻</span> ?</span>`;
+  return `<span class="pill pill-${p.status}" title="Resets ${esc(when(m.resetsAt))}"><span aria-hidden="true">↻</span> ${p.remainingMs <= 0 ? 'reset' : dur(p.remainingMs)}</span>`;
+}
+
 function meterHtml(m, pi, mi) {
   const pct = m.usedPercent;
   const p = m.pace;
-  const reset = p.remainingMs != null ? `Resets in ${dur(p.remainingMs)} · ${when(m.resetsAt)}` : m.resetText || 'Reset time unknown';
   const details = [
-    reset,
     budgetText(m),
     p.exhaustAt && p.status === 'over-pace' ? `Runs out ~${when(p.exhaustAt)}` : null,
     p.projectedAtReset != null && p.status !== 'limited' ? `Projected ${Math.round(p.projectedAtReset)}% at reset` : null,
@@ -45,16 +50,42 @@ function meterHtml(m, pi, mi) {
   return `<div class="meter">
     <div class="meter-head">
       <span class="meter-label">${esc(m.label)}</span>
-      <span class="meter-value">${pct == null ? '?' : Math.round(pct)}<small>% used</small></span>
+      ${resetPill(m)}
     </div>
     <div class="track" role="img" aria-label="${esc(m.label)}: ${pct == null ? 'unknown' : Math.round(pct)}% used${p.expectedPercent != null ? `, even pace would be ${Math.round(p.expectedPercent)}%` : ''}">
       <div class="fill" style="width:${Math.min(100, pct ?? 0)}%;background:${STATUS_COLOR[p.status]}"></div>
       ${p.expectedPercent != null ? `<div class="tick" style="left:calc(${p.expectedPercent}% - 1px)" title="Even pace: ${Math.round(p.expectedPercent)}%"></div>` : ''}
     </div>
-    <span class="status"><span class="dot s-${p.status}"></span>${PACE_LABEL[p.status]}${p.expectedPercent != null ? ` (even pace ${Math.round(p.expectedPercent)}%)` : ''}</span>
+    <div class="meter-sub">
+      <span class="status"><span class="meter-value">${pct == null ? '?' : Math.round(pct)}<small>% used</small></span><span class="dot s-${p.status}"></span>${PACE_LABEL[p.status]}${p.expectedPercent != null ? ` · even pace ${Math.round(p.expectedPercent)}%` : ''}</span>
+      <span class="reset-at">${m.resetsAt ? esc(when(m.resetsAt)) : esc(m.resetText || '')}</span>
+    </div>
     <div class="details">${details.map((d) => `<span>${esc(d)}</span>`).join('')}${m.stale ? `<span class="stale">Last read ${ago(m.capturedAt)}</span>` : ''}</div>
     ${m.history.length >= 2 ? `<svg class="spark" data-p="${pi}" data-m="${mi}" aria-hidden="true"></svg>` : ''}
   </div>`;
+}
+
+/** "Resets next" list across all services, soonest first (option B). */
+function renderUpNext() {
+  const rows = data.providers.flatMap((p) => p.meters.map((m) => ({ p, m })))
+    .filter(({ m }) => m.pace.remainingMs != null)
+    .sort((a, b) => a.m.pace.remainingMs - b.m.pace.remainingMs)
+    .slice(0, compact ? 5 : 8);
+  if (!rows.length) { $('#upnext').innerHTML = ''; return; }
+  $('#upnext').innerHTML = `<section class="card upnext"><h2>Resets next</h2><div class="upnext-grid">${rows.map(({ p, m }) => `
+    <span class="un-name">${esc(p.name)} · ${esc(m.label)}</span>
+    <span class="un-pct s-text-${m.pace.status}">${m.usedPercent == null ? '?' : Math.round(m.usedPercent)}%</span>
+    <span class="un-in">${m.pace.remainingMs <= 0 ? 'reset' : `in ${dur(m.pace.remainingMs)}`}</span>
+    <span class="un-when">${esc(when(m.resetsAt))}</span>`).join('')}</div></section>`;
+}
+
+/** Header: when the data was last read and when the next background refresh runs. */
+function freshnessText() {
+  const latest = data.providers.map((p) => p.lastCapturedAt).filter(Boolean).sort().at(-1);
+  const parts = [latest ? `Updated ${ago(latest)}` : 'No data yet'];
+  const next = data.headless?.nextAt;
+  if (next) parts.push(Date.parse(next) <= Date.now() ? 'refreshing…' : `next refresh in ${dur(Date.parse(next) - Date.now())}`);
+  return parts.join(' · ');
 }
 
 function drawSpark(svg, m) {
@@ -107,7 +138,8 @@ function renderNotices() {
 function render() {
   if (!data) return;
   renderNotices();
-  $('#updated').textContent = `Updated ${when(data.generatedAt)} · refreshes every minute`;
+  $('#updated').textContent = freshnessText();
+  renderUpNext();
   $('#viewToggle').textContent = tableView ? 'Card view' : 'Table view';
   $('#grid').hidden = tableView;
   $('#table').hidden = !tableView;

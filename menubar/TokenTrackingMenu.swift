@@ -124,11 +124,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor private func updateButton() {
         guard let button = statusItem?.button else { return }
-        let image = NSImage(systemSymbolName: model.symbol, accessibilityDescription: "TokenTracking usage")
-        image?.isTemplate = true
-        button.image = image
-        button.title = " " + model.title
         button.toolTip = model.tooltip
+        if !model.slots.isEmpty {
+            // "{icon}3 {icon}9 {icon}-": one icon + usage digit per service, drawn as one template image.
+            button.image = MenuBarGlyphs.image(for: model.slots)
+            button.imagePosition = .imageOnly
+            button.title = ""
+        } else {
+            let image = NSImage(systemSymbolName: model.symbol, accessibilityDescription: "TokenTracking usage")
+            image?.isTemplate = true
+            button.image = image
+            button.imagePosition = .imageLeading
+            button.title = " " + model.title
+        }
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
@@ -149,11 +157,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// MARK: - Menu bar glyphs
+
+/// One service in the menu bar: an SF Symbol and a single character for its worst meter.
+struct MenuSlot: Equatable {
+    let symbol: String
+    let text: String   // "0"…"9" = tens of % used, "–" = at the limit, "?" = no reading
+}
+
+enum MenuBarGlyphs {
+    /// Services shown in the menu bar, in order. Grok Bot is a separate limit inside Cursor.
+    static let services: [(id: String, symbol: String, name: String, matches: (String, String) -> Bool)] = [
+        ("claude", "asterisk", "Claude", { p, _ in p == "claude" }),
+        ("cursor", "cursorarrow", "Cursor", { p, m in p == "cursor" && m != "grok-bot" }),
+        ("grok-bot", "bolt", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
+        ("gemini", "sparkle", "Gemini", { p, _ in p == "gemini" }),
+        ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
+    ]
+
+    /// 0–9 = tens of % used (95% → "9"), "–" at/over the limit.
+    static func digit(_ pct: Double) -> String {
+        pct >= 100 ? "–" : String(min(9, max(0, Int(pct / 10))))
+    }
+
+    /// Draw icons and digits in black on a transparent image and mark it as a template, so macOS
+    /// tints it for light/dark menu bars and the pressed state, like any other menu bar icon.
+    static func image(for slots: [MenuSlot]) -> NSImage {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        let height: CGFloat = 18, iconGap: CGFloat = 1.5, slotGap: CGFloat = 6
+        let parts = slots.map { slot -> (NSImage?, NSAttributedString) in
+            (NSImage(systemSymbolName: slot.symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config),
+             NSAttributedString(string: slot.text, attributes: attrs))
+        }
+        let width = parts.reduce(CGFloat(0)) { w, p in w + (p.0?.size.width ?? 0) + iconGap + p.1.size().width } + slotGap * CGFloat(max(0, parts.count - 1))
+        let image = NSImage(size: NSSize(width: ceil(width), height: height), flipped: false) { _ in
+            var x: CGFloat = 0
+            for (icon, text) in parts {
+                if let icon {
+                    icon.draw(in: NSRect(x: x, y: (height - icon.size.height) / 2, width: icon.size.width, height: icon.size.height))
+                    x += icon.size.width + iconGap
+                }
+                let ts = text.size()
+                text.draw(at: NSPoint(x: x, y: (height - ts.height) / 2))
+                x += ts.width + slotGap
+            }
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "TokenTracking usage"
+        return image
+    }
+}
+
 // MARK: - Status polling
 
 struct Status: Decodable {
     struct Provider: Decodable { let id: String; let name: String; let meters: [Meter] }
-    struct Meter: Decodable { let label: String; let usedPercent: Double?; let pace: Pace }
+    struct Meter: Decodable { let id: String; let label: String; let usedPercent: Double?; let pace: Pace }
     struct Pace: Decodable { let status: String }
     let providers: [Provider]
 }
@@ -161,6 +223,7 @@ struct Status: Decodable {
 @MainActor
 final class StatusModel: ObservableObject {
     @Published var title = "…"
+    @Published var slots: [MenuSlot] = []
     @Published var tooltip = "TokenTracking"
     @Published var symbol = "gauge.with.dots.needle.0percent"
     @Published var reachable = true
@@ -203,6 +266,18 @@ final class StatusModel: ObservableObject {
 
     /// Title = the most at-risk meter: worst pace status first, then highest % used.
     private func apply(_ s: Status) {
+        // Per-service digits: the worst (highest %) meter of each service that has data.
+        var lines: [String] = []
+        slots = MenuBarGlyphs.services.compactMap { svc in
+            let ms = s.providers.flatMap { p in p.meters.filter { svc.matches(p.id, $0.id) } }
+            guard !ms.isEmpty else { return nil }
+            guard let worst = ms.compactMap({ m in m.usedPercent.map { (m, $0) } }).max(by: { $0.1 < $1.1 }) else {
+                lines.append("\(svc.name): no reading")
+                return MenuSlot(symbol: svc.symbol, text: "?")
+            }
+            lines.append("\(svc.name): \(Int(worst.1.rounded()))% (\(worst.0.label))")
+            return MenuSlot(symbol: svc.symbol, text: MenuBarGlyphs.digit(worst.1))
+        }
         let rank = ["limited": 4, "over-pace": 3, "ahead": 2, "ok": 1]
         let meters = s.providers.flatMap { p in p.meters.map { (p.name, $0) } }.filter { $0.1.usedPercent != nil }
         guard let (name, top) = meters.max(by: { a, b in
@@ -213,7 +288,7 @@ final class StatusModel: ObservableObject {
         }
         title = "\(Int(pct.rounded()))%"
         let paceText = ["limited": "limit reached", "over-pace": "will run out before reset", "ahead": "ahead of pace", "ok": "on pace"][top.pace.status] ?? ""
-        tooltip = "Most at risk: \(name) · \(top.label): \(Int(pct.rounded()))% used\(paceText.isEmpty ? "" : " (\(paceText))")"
+        tooltip = (lines + ["", "Most at risk: \(name) · \(top.label): \(Int(pct.rounded()))% used\(paceText.isEmpty ? "" : " (\(paceText))")"]).joined(separator: "\n")
         switch pct {
         case ..<25: symbol = "gauge.with.dots.needle.0percent"
         case ..<50: symbol = "gauge.with.dots.needle.33percent"

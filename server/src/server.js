@@ -9,7 +9,7 @@ const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_BODY = 16 * 1024;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
-export function createApp({ db, config, refresh = null }) {
+export function createApp({ db, config, refresh = null, schedule = null }) {
   const allowedHosts = new Set([`127.0.0.1:${config.port}`, `localhost:${config.port}`]);
   const selfOrigins = new Set([...allowedHosts].map((h) => `http://${h}`));
 
@@ -40,7 +40,7 @@ export function createApp({ db, config, refresh = null }) {
     try {
       if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true });
       if (req.method === 'GET' && url.pathname === '/api/status') {
-        return send(200, { ...buildStatus(db), headless: config.headless?.enabled ? (await lastHeadlessRun(config)) || {} : null });
+        return send(200, { ...buildStatus(db), headless: config.headless?.enabled ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin } : null });
       }
       if (req.method === 'POST' && url.pathname === '/api/refresh') {
         if (!refresh) return send(404, 'headless refresh disabled');
