@@ -4,7 +4,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 APP=build/TokenTracking.app
-rm -rf "$APP"
+# Update the bundle in place (don't delete it) so Login Items and other references keep pointing at it.
 mkdir -p "$APP/Contents/MacOS"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'

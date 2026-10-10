@@ -25,3 +25,12 @@ server.listen(config.port, config.host, () => {
 const shutdown = () => { clearInterval(timer); server.close(); db.close(); process.exit(0); };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// Started by the menu bar app: exit when the app goes away, even if it was force-killed and
+// couldn't stop us (TOKENTRACKING_PARENT_PID is set by the app).
+const parentPid = Number(process.env.TOKENTRACKING_PARENT_PID);
+if (parentPid) {
+  setInterval(() => {
+    try { process.kill(parentPid, 0); } catch { console.log('Menu bar app is gone; stopping.'); shutdown(); }
+  }, 3000).unref();
+}

@@ -81,7 +81,22 @@ function scrape() {
 }
 
 
-/** Click through to a usage view. Steps: { selector } or { text, within? } (exact text on a clickable element). */
+/**
+ * A full mouse press, not just el.click(): menu libraries such as Radix open on pointerdown,
+ * which .click() never fires (seen on muse.ai's Settings menu, 2026-10-10).
+ */
+function press(el) {
+  const r = el.getBoundingClientRect();
+  const opts = { bubbles: true, cancelable: true, composed: true, view: window, button: 0, buttons: 1,
+    clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 1, pointerType: 'mouse', isPrimary: true };
+  el.dispatchEvent(new PointerEvent('pointerdown', opts));
+  el.dispatchEvent(new MouseEvent('mousedown', opts));
+  el.dispatchEvent(new PointerEvent('pointerup', { ...opts, buttons: 0 }));
+  el.dispatchEvent(new MouseEvent('mouseup', { ...opts, buttons: 0 }));
+  el.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0 }));
+}
+
+/** Click through to a usage view. Steps: { selector } or { text, within? } (exact first-line text of a clickable element). */
 async function runOpenSteps(steps) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (const step of steps || []) {
@@ -89,11 +104,11 @@ async function runOpenSteps(steps) {
     for (let i = 0; i < 40 && !el; i++) { // wait up to ~20s for the element
       el = step.selector
         ? document.querySelector(step.selector)
-        : [...document.querySelectorAll(step.within || 'button,[role=menuitem],[role=tab],a')].find((b) => b.innerText.trim() === step.text);
+        : [...document.querySelectorAll(step.within || 'button,[role=menuitem],[role=tab],a')].find((b) => b.innerText.trim().split('\n')[0].trim() === step.text); // first line: menu items may append a shortcut ("Settings\n⌘,")
       if (!el) await sleep(500);
     }
     if (!el) return false;
-    el.click();
+    press(el);
     await sleep(800);
   }
   return true;

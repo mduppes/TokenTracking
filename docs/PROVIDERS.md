@@ -61,6 +61,9 @@ Page structure for Gemini and Muse was inspected on the live sites on 2026-10-10
   
   Steps only run in tabs the extension opened for refresh (`refreshTabIds`), never in your own tabs.
 - When you open Settings yourself, the collector notices the progress bar and captures it.
+- **Headless (verified 2026-10-10):** two gotchas in `openSteps`:
+  - The Settings menu (Radix-style) opens on **pointerdown**, so `scrape-dom.js` dispatches a full pointer/mouse press instead of `el.click()`.
+  - The menu item's text is "Settings\n⌘," (it includes the shortcut), so text steps match on the **first line**.
 - The meter label is the plan name, so it gets a new meter id if you change plans. See ROADMAP: meter id reconciliation.
 
 ## Verification loop (do this per provider)

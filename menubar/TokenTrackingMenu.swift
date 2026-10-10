@@ -22,6 +22,9 @@ final class ServiceRunner {
         p.executableURL = URL(fileURLWithPath: BuildConfig.nodePath)
         p.arguments = ["--disable-warning=ExperimentalWarning", "server/src/index.js"]
         p.currentDirectoryURL = URL(fileURLWithPath: BuildConfig.projectDir)
+        var env = ProcessInfo.processInfo.environment
+        env["TOKENTRACKING_PARENT_PID"] = String(ProcessInfo.processInfo.processIdentifier) // service exits if we die
+        p.environment = env
         let logDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".tokentracking")
         try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
         let logURL = logDir.appendingPathComponent("service.log")
