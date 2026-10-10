@@ -10,7 +10,6 @@ export function loadConfig(env = process.env) {
   return {
     home,
     dbPath: join(home, 'tokentracking.db'),
-    debugDir: join(home, 'debug'),
     host: '127.0.0.1',
     port: Number(env.TOKENTRACKING_PORT || 7878),
     // Headless refresh (ADR-009): starts Chrome only while refreshing, with its own profile.
@@ -20,11 +19,8 @@ export function loadConfig(env = process.env) {
       chromePath: env.TOKENTRACKING_CHROME || DEFAULT_CHROME,
       profileDir: join(home, 'browser-profile'),
       statusPath: join(home, 'headless-status.json'),
-      // Comma-separated provider ids to leave to the extension instead (e.g. "claude,cursor").
+      // Comma-separated provider ids to skip (e.g. "muse").
       disabled: (env.TOKENTRACKING_HEADLESS_SKIP || '').split(',').map((s) => s.trim()).filter(Boolean),
     },
-    // Optional comma-separated list of extension ids allowed to talk to the service.
-    // Empty = any chrome-extension:// origin (see docs/SECURITY.md).
-    allowedExtensionIds: (env.TOKENTRACKING_EXTENSION_IDS || '').split(',').map((s) => s.trim()).filter(Boolean),
   };
 }

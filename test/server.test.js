@@ -8,20 +8,24 @@ import { loadConfig } from '../server/src/config.js';
 import { openDb } from '../server/src/db.js';
 import { createApp } from '../server/src/server.js';
 
-let server, db, home, port;
-const EXT = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
+let server, db, home, port, refreshCalls = 0;
 
 before(async () => {
   home = mkdtempSync(join(tmpdir(), 'tt-test-'));
-  const config = { ...loadConfig({ TOKENTRACKING_HOME: home }), port: 0 };
+  const config = loadConfig({ TOKENTRACKING_HOME: home, TOKENTRACKING_HEADLESS: '0' });
   db = openDb(config.dbPath);
-  server = createApp({ db, config });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  port = server.address().port;
-  config.port = port; // host check uses the real port
-  server.close(); // re-create with the correct port in the allow-list
-  server = createApp({ db, config });
+  // Find a free port, then start for real with that port in the Host allow-list.
+  const probe = createApp({ db, config });
+  await new Promise((r) => probe.listen(0, '127.0.0.1', r));
+  port = probe.address().port;
+  await new Promise((r) => probe.close(r));
+  config.port = port;
+  server = createApp({ db, config, refresh: async () => { refreshCalls++; return { at: 'now', results: {} }; } });
   await new Promise((r) => server.listen(port, '127.0.0.1', r));
+
+  const resetsAt = new Date(Date.now() + 2 * 36e5).toISOString();
+  db.addSnapshot('claude', { capturedAt: new Date().toISOString(), source: 'test', plan: null },
+    { id: 'five-hour', label: 'Current session (5h)', window: 'session', usedPercent: 30, used: null, limit: null, unit: null, resetsAt, resetText: null });
 });
 after(() => { server.close(); db.close(); rmSync(home, { recursive: true, force: true }); });
 
@@ -37,30 +41,28 @@ function call(method, path, { body, headers = {} } = {}) {
   });
 }
 
-const snapshot = {
-  provider: 'claude', source: 'json:test', capturedAt: new Date().toISOString(),
-  meters: [{ id: 'five-hour', label: 'Current session (5h)', window: 'session', usedPercent: 30, resetsAt: new Date(Date.now() + 2 * 36e5).toISOString() }],
-};
-
-test('ingest from extension origin, then read status', async () => {
-  const r = await call('POST', '/api/ingest', { body: { snapshots: [snapshot] }, headers: { 'content-type': 'application/json', origin: EXT } });
-  assert.equal(r.status, 200);
-  assert.equal(r.body.inserted, 1);
-  assert.equal(r.headers['access-control-allow-origin'], EXT);
-  const dup = await call('POST', '/api/ingest', { body: snapshot, headers: { 'content-type': 'application/json', origin: EXT } });
-  assert.equal(dup.body.inserted, 0, 'identical repeat is deduped');
+test('status includes stored meters with pacing', async () => {
   const s = await call('GET', '/api/status');
+  assert.equal(s.status, 200);
   assert.equal(s.body.providers[0].id, 'claude');
   assert.equal(s.body.providers[0].meters[0].usedPercent, 30);
   assert.ok(s.body.providers[0].meters[0].pace.expectedPercent > 0);
 });
 
-test('rejects web origins, foreign hosts, wrong content-type, junk', async () => {
-  assert.equal((await call('POST', '/api/ingest', { body: snapshot, headers: { 'content-type': 'application/json', origin: 'https://evil.example' } })).status, 403);
+test('refresh: allowed from the dashboard origin, needs JSON', async () => {
+  const ok = await call('POST', '/api/refresh', { body: {}, headers: { 'content-type': 'application/json', origin: `http://127.0.0.1:${port}` } });
+  assert.equal(ok.status, 200);
+  assert.equal(refreshCalls, 1);
+  assert.equal((await call('POST', '/api/refresh', { body: 'x', headers: { 'content-type': 'text/plain' } })).status, 415);
+});
+
+test('rejects other origins (incl. extensions) and foreign hosts', async () => {
+  const json = { 'content-type': 'application/json' };
+  assert.equal((await call('POST', '/api/refresh', { body: {}, headers: { ...json, origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await call('GET', '/api/status', { headers: { origin: 'chrome-extension://abcdefghijklmnopabcdefghijklmnop' } })).status, 403);
   assert.equal((await call('GET', '/api/status', { headers: { host: 'evil.example:7878' } })).status, 403);
-  assert.equal((await call('POST', '/api/ingest', { body: 'x', headers: { 'content-type': 'text/plain' } })).status, 415);
-  const junk = await call('POST', '/api/ingest', { body: { provider: '../etc', meters: [] }, headers: { 'content-type': 'application/json' } });
-  assert.equal(junk.body.rejected, 1);
+  assert.equal((await call('POST', '/api/ingest', { body: {}, headers: json })).status, 404, 'extension ingest endpoint is gone');
+  assert.equal(refreshCalls, 1);
 });
 
 test('serves dashboard, blocks traversal', async () => {

@@ -5,10 +5,10 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { launchChrome, openPage, profileInUse, browserIdentity } from './chrome.js';
 import { execFileSync } from 'node:child_process';
-import { providerById, parseClaudeUsage, parseCursorUsage, parseCursorGrokBot } from '../../../extension/lib/providers.js';
-import { normalizeDomMeters } from '../../../extension/lib/parse.js';
+import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, MUSE_OPEN_STEPS } from '../../../lib/providers.js';
+import { normalizeDomMeters } from '../../../lib/parse.js';
 
-const SCRAPER_PATH = fileURLToPath(new URL('../../../extension/lib/scrape-dom.js', import.meta.url));
+const SCRAPER_PATH = fileURLToPath(new URL('../../../lib/scrape-dom.js', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** macOS version for Client Hints, e.g. "26.6.2" (falls back to a generic value off macOS). */
@@ -74,7 +74,7 @@ export const TASKS = [
     id: 'muse',
     url: 'https://muse.ai/',
     loggedOut: (href, text) => !/(^|\.)muse\.ai$/.test(new URL(href).hostname) || /Log in or create an account/i.test(text),
-    read: (page) => readDom(page, providerById('muse').openSteps),
+    read: (page) => readDom(page, MUSE_OPEN_STEPS),
   },
 ];
 

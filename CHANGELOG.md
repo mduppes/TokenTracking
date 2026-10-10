@@ -3,6 +3,16 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.5.0] - 2026-10-10
+### Removed
+- **The Chrome extension** (ADR-010), along with its hidden-refresh header stripping (ADR-008), the Cursor Origin rule, `/api/ingest`, `/api/debug`, the `chrome-extension://` Origin allowance and `TOKENTRACKING_EXTENSION_IDS`.
+### Fixed
+- Pacing no longer says "will run out" from a short burst right after a reset: the observed slope needs a span of ≥5% of the window, and over-pace needs ≥5% used.
+### Changed
+- Shared code moved to `lib/` (`parse.js`, `providers.js` = parsers + `MUSE_OPEN_STEPS`, `scrape-dom.js`).
+- The local service accepts browser requests only from its own dashboard origin.
+- Menu bar: hovering the icon shows which meter the % refers to ("Most at risk: Muse · Free plan: 97% used (will run out before reset)").
 ### Added
 - **macOS menu bar app** (`menubar/`, `npm run build:menubar`): the most at-risk meter in the menu bar, plus a compact dashboard panel with Refresh now / Open dashboard / Quit. No Dock icon.
 - The service exits when the menu bar app that started it dies (`TOKENTRACKING_PARENT_PID`), including on force quit.

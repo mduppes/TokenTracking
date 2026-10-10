@@ -112,7 +112,7 @@ function render() {
   $('#grid').hidden = tableView;
   $('#table').hidden = !tableView;
   if (!data.providers.length) {
-    $('#grid').innerHTML = `<div class="empty"><strong>No usage data yet.</strong><br>Load the extension from <code>extension/</code> in Chrome (chrome://extensions → Developer mode → Load unpacked), then open a usage page such as claude.ai → Settings → Usage, or click “Refresh now” in the extension popup.</div>`;
+    $('#grid').innerHTML = `<div class="empty"><strong>No usage data yet.</strong><br>Log in once with <code>npm run browser-login</code> (then quit that Chrome window), and click “Refresh now”.</div>`;
     return;
   }
   $('#grid').innerHTML = data.providers.map((p, pi) => `<section class="card">

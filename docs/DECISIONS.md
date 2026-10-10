@@ -10,7 +10,7 @@ Each entry gives the context, the decision and its consequences. Append new ADRs
 **Decision.** Everything runs on the user's machine: a Chrome extension plus a localhost service with SQLite. No accounts, servers or sync.
 **Consequences.** Simple and private. No cross-device view; a menu bar app or optional sync could be added later.
 
-## ADR-002: Use the browser session (extension) instead of API keys or CLI tokens (2026-10-10)
+## ADR-002: Use the browser session (extension) instead of API keys or CLI tokens (2026-10-10) (the "no secrets" principle stands; the extension part is superseded by ADR-009/010)
 
 **Context.** Subscription limits (Claude Pro/Max, Cursor, Gemini, Grok, Muse) aren't available through official APIs or API keys. The only sources are each service's own web UI and internal endpoints, or credentials stored by CLIs and apps (Keychain, `~/.gemini/oauth_creds.json`, and so on). Existing products use the same approach (tokenkarma and QuotaMeter use extensions; CodexBar uses CLI tokens and cookies). The user pointed out that every service shows usage bars on a web page, and preferred not to hand out tokens.
 **Decision.** Gather data primarily with a Chrome extension running on the provider sites, using the logged-in session. Our code never reads secrets.
@@ -26,7 +26,7 @@ Each entry gives the context, the decision and its consequences. Append new ADRs
 **Decision.** Plain modern JavaScript (ES modules) everywhere: Node ≥ 22.13 built-ins on the server (`node:http`, `node:sqlite`, `node:test`), and MV3 with no bundler in the extension. Logic shared with tests lives in `extension/lib/` as pure ES modules that Node imports directly.
 **Consequences.** No supply-chain surface and nothing to install. There's no TypeScript; use JSDoc where types help, and revisit if the codebase grows a lot. `node:sqlite` prints an ExperimentalWarning on some Node versions, which the npm scripts suppress.
 
-## ADR-004: Layered capture: direct fetch → JSON interception → DOM scraping (2026-10-10)
+## ADR-004: Layered capture: direct fetch → JSON interception → DOM scraping (2026-10-10) (superseded by ADR-009: in-page JSON, else DOM)
 
 **Context.** Endpoints are undocumented and differ per provider. Some, like Gemini, use opaque RPC.
 **Decision.** Each provider can implement `directFetch` (no tab needed). On provider pages, a MAIN-world hook copies usage-shaped JSON responses, and a DOM scraper reads rendered progress bars on the usage page. A generic JSON extractor handles unknown shapes, and dedicated parsers replace it once a provider is verified.
@@ -47,12 +47,12 @@ Each entry gives the context, the decision and its consequences. Append new ADRs
 
 **Consequences.** Simple and easy to explain. It doesn't model daily rhythms (sleeping hours), which could become a later improvement such as "pace over active hours".
 
-## ADR-007: Localhost service security model (2026-10-10)
+## ADR-007: Localhost service security model (2026-10-10) (amended by ADR-010: no extension origins)
 
 **Decision.** Bind to 127.0.0.1, check the Host header (DNS rebinding), allow-list Origins (extension or self only), require JSON content-type, validate strictly, and never use permissive CORS. No pairing token for now. See SECURITY.md.
 **Consequences.** Web pages can't read or write data. Any installed Chrome extension could post data unless `TOKENTRACKING_EXTENSION_IDS` is set, which is accepted for a personal tool.
 
-## ADR-008: Hidden background refresh via an offscreen document (2026-10-10) (superseded by ADR-009 if headless holds up)
+## ADR-008: Hidden background refresh via an offscreen document (2026-10-10) (superseded by ADR-009; removed in ADR-010)
 
 **Context.** Gemini and Muse can only be read from their rendered pages. Opening them in a minimized window every 15 minutes made Chrome flicker in the Dock, which the user didn't want. A separate headless Chrome (run by the local service) would need a second browser profile with its own logins.
 **Decision.** By default (`refreshMode: 'hidden'`), background refresh loads usage pages in an iframe inside a `chrome.offscreen` document (reason `DOM_SCRAPING`). The content scripts run with `all_frames` inside it. Sites forbid framing, so a **session** declarativeNetRequest rule removes `X-Frame-Options` and `Content-Security-Policy` from responses that match all of these:
@@ -99,3 +99,13 @@ It doesn't attempt deeper fingerprint spoofing.
 - Costs a second set of logins that occasionally expire.
 - Sites can still detect automation in other ways. If one starts blocking, that provider can be handed back to the extension with `TOKENTRACKING_HEADLESS_SKIP=<id>`.
 - The extension becomes optional. Its hidden-refresh mode (ADR-008) is superseded if headless proves itself.
+
+## ADR-010: Remove the Chrome extension (2026-10-10)
+
+**Context.** Headless refresh (ADR-009) was verified end to end for all four providers. The extension's remaining value was capturing while browsing. It cost a separate install and reload cycle, header-modification permissions (ADR-008, plus a first-party Origin rule for Cursor), an ingest API on the local service, and two code paths to maintain.
+**Decision.** Delete `extension/`. Move the shared code to `lib/`: `parse.js`, `providers.js` (parsers only) and `scrape-dom.js`. Remove `/api/ingest` and `/api/debug`, the `chrome-extension://` Origin allowance, and `TOKENTRACKING_EXTENSION_IDS`.
+**Consequences.**
+- One data path, and no header modification anywhere.
+- A smaller attack surface: the service accepts browser requests only from its own dashboard.
+- Updates come only from scheduled or manual refreshes, not instantly while browsing.
+- The extension remains in git history (tag before this change: `main` at 3f504fa) if it's ever needed again.

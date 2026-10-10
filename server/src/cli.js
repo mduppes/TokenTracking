@@ -12,7 +12,7 @@ if (process.argv.includes('--json')) {
   process.exit(0);
 }
 if (!status.providers.length) {
-  console.log('No data yet. Start the service (npm start), load the extension, and open a usage page.');
+  console.log('No data yet. Log in once with `npm run browser-login`, then run `npm run refresh` (or open the menu bar app).');
   process.exit(0);
 }
 

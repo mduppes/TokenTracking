@@ -3,25 +3,24 @@
 Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
-- [ ] **Headless refresh:** log in (`npm run browser-login`), verify all four services end to end, watch for bot blocks over a few days. Then decide whether to remove the extension (or keep it as a fallback) and remove ADR-008's hidden mode.
-- [x] **macOS menu bar app** (option C): Swift `MenuBarExtra` + compact dashboard (2026-10-10).
-- [x] **One moving part:** the menu bar app starts, restarts and stops the service. Add the app to Login Items to start at login.
+- [ ] **Watch headless for a few days** for bot blocks or session expiry; tune the interval if needed.
+- [ ] **Claude multi-org picker** (config or dashboard setting).
+- [ ] **"X of Y" parsing** in `scrape-dom.js`, for pages that show counts rather than percentages.
+- [ ] **Notifications** from the menu bar app at configurable thresholds (70/85/95%) and on `over-pace`.
+- [ ] Menu bar: choose which meter drives the title, or pin one.
 - [ ] Optional: port the service to Swift inside the app (no Node at all): SQLite via libsqlite3, CDP over a pipe, the panel rendered natively.
-- [ ] Menu bar: optional notifications at 85% / over-pace; choose which meter drives the title.
 
-## Earlier items
-- [ ] **Verify every provider against the live site** (see the verification loop in PROVIDERS.md). Confirm end-to-end capture for Claude, Cursor, Gemini and Muse. Add a DOM-fixture test harness for `collector.js` (e.g. a tiny JSDOM-free HTML parser, or run it in the browser).
-- [ ] **Meter id reconciliation.** When JSON and DOM both report the same meter under different ids, map them to one id (per-provider alias table, or prefer JSON and drop DOM meters once JSON has been seen in the last 24 h).
-- [ ] **Claude multi-org picker.** Choose which org(s) to track in Options.
-- [ ] **"X of Y" parsing** in the DOM scraper, for pages that show counts rather than percentages.
-- [ ] **Alerts.** Desktop notifications (`chrome.notifications`) at configurable thresholds (70/85/95%) and when status becomes `over-pace`.
+## Done
+- [x] Headless refresh verified for Claude, Cursor + Grok Bot, Gemini, Muse (2026-10-10)
+- [x] macOS menu bar app that starts and stops the service; Dock fallback when the menu bar is full (2026-10-10)
+- [x] Chrome extension removed (ADR-010, 2026-10-10)
 
 ## Cost per token / value of each subscription (user's follow-up request)
 Goal: "how much am I getting out of each subscription?"
 - [ ] Pricing table (`server/pricing.json`) of public API list prices per model, per 1M input, output, cache-read and cache-write tokens. Source and date for every entry; never hard-code from memory.
 - [ ] Token sources, ranked by precision:
   - **Claude Code**: local JSONL logs `~/.claude/projects/**/*.jsonl` (`message.usage`: input, output, cache-creation and cache-read tokens, plus `message.model`). Needs the user's explicit OK to read; it isn't a secret, but the agent sandbox flagged it.
-  - **Cursor**: the usage-events page or CSV export has per-request tokens and model.
+  - **Cursor**: the usage-events page or CSV export has per-request tokens and model (readable headlessly like the rest).
   - **Muse**: the token pool is metered in tokens, so % × pool size gives tokens.
   - **Claude web, Gemini, Grok**: no token counts. Only an estimate is possible (% of pool), so label it as an estimate.
 - [ ] Subscription price per provider in Options (user enters it, e.g. $200/mo).

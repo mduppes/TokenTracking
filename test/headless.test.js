@@ -1,16 +1,16 @@
 // Drives real headless Chrome (skipped if Chrome isn't installed) to test the CDP client and the
-// shared page reader (extension/lib/scrape-dom.js) against fixtures modeled on the live pages.
+// shared page reader (lib/scrape-dom.js) against fixtures modeled on the live pages.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_CHROME, launchChrome, openPage } from '../server/src/headless/chrome.js';
-import { normalizeDomMeters } from '../extension/lib/parse.js';
+import { normalizeDomMeters } from '../lib/parse.js';
 
 const chromePath = process.env.TOKENTRACKING_CHROME || DEFAULT_CHROME;
 const skip = !existsSync(chromePath) && 'Google Chrome not installed';
-const SCRAPER = readFileSync(new URL('../extension/lib/scrape-dom.js', import.meta.url), 'utf8');
+const SCRAPER = readFileSync(new URL('../lib/scrape-dom.js', import.meta.url), 'utf8');
 
 // Structure seen on gemini.google.com/usage (2026-10-10): label, icon ligature, "N% used", reset line.
 const GEMINI = `<main><h1>Usage limits</h1>

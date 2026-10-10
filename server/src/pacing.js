@@ -35,7 +35,10 @@ export function computePace(latest, history = [], now = new Date()) {
   if (inWindow.length >= 2) {
     const a = inWindow[0], b = inWindow.at(-1);
     const dt = (Date.parse(b.capturedAt) - Date.parse(a.capturedAt)) / H;
-    if (dt >= 1 / 6) out.ratePerHour = round(Math.max(0, (b.usedPercent - a.usedPercent) / dt), 3);
+    // Need a span of ≥5% of the window (and ≥10 min): a burst right after a reset shouldn't be
+    // extrapolated over the whole window (it flagged a 3% session as "will run out").
+    const minSpan = Math.max(1 / 6, (out.windowHours || 0) * 0.05);
+    if (dt >= minSpan) out.ratePerHour = round(Math.max(0, (b.usedPercent - a.usedPercent) / dt), 3);
   }
   if (out.ratePerHour == null && out.expectedPercent != null && winMs) {
     const elapsedH = (out.expectedPercent / 100) * (winMs / H);
@@ -54,7 +57,7 @@ export function computePace(latest, history = [], now = new Date()) {
   }
 
   if (out.status !== 'limited') {
-    if (out.exhaustAt && Number.isFinite(resetMs) && Date.parse(out.exhaustAt) < resetMs) out.status = 'over-pace';
+    if (out.exhaustAt && used >= 5 && Number.isFinite(resetMs) && Date.parse(out.exhaustAt) < resetMs) out.status = 'over-pace';
     else if (out.expectedPercent != null && used > out.expectedPercent + 10) out.status = 'ahead';
     else if (out.expectedPercent != null || out.ratePerHour != null) out.status = 'ok';
   }

@@ -1,62 +1,34 @@
 # Architecture
 
 ```
-┌──────────────────────── Chrome ────────────────────────┐        ┌──────── Local service (Node) ────────┐
-│                                                        │        │  127.0.0.1:7878                       │
-│  Provider tab (claude.ai, cursor.com, …)               │        │                                       │
-│   ├─ content/hook.js   (MAIN world, document_start)    │        │  POST /api/ingest ──► SQLite          │
-│   │    wraps fetch/XHR, copies usage-ish JSON ──┐      │        │                     (~/.tokentracking)│
-│   └─ content/collector.js (ISOLATED world)      │      │        │  GET  /api/status ◄── pacing.js       │
-│        relays JSON + scrapes progress bars ─────┤      │        │  GET  /  (dashboard: public/)         │
-│                                                 ▼      │  HTTP  │  POST /api/debug  ──► debug/*.json    │
-│  background.js (MV3 service worker)  ──────────────────┼───────►│                                       │
-│   ├─ normalizes → meters (lib/parse.js, lib/providers.js)       │  npm run status (cli.js) reads DB     │
-│   ├─ caches last snapshot + offline queue (storage.local)       └───────────────────────────────────────┘
-│   ├─ alarm every N min: directFetch() or open usage page in a minimized window
-│   └─ badge = highest % used
-│  popup.html / options.html                             │
-└────────────────────────────────────────────────────────┘
+┌──────── Menu bar app (Swift) ────────┐      ┌──────────── Local service (Node, 127.0.0.1:7878) ───────────┐
+│ status item: most at-risk %          │ HTTP │  GET  /api/status  ◄── status.js + pacing.js ◄── SQLite      │
+│ popover: WKWebView of /?compact ─────┼─────►│  POST /api/refresh ──► headless/refresh.js                   │
+│ starts/stops the service (child)     │      │  GET  /  (dashboard: public/)                                │
+└──────────────────────────────────────┘      │  timer: every 15 min ──► headless/refresh.js                 │
+                                              └───────────────┬──────────────────────────────────────────────┘
+                                                              │ spawn, CDP over --remote-debugging-pipe
+                                                              ▼
+                                   Google Chrome --headless (own profile ~/.tokentracking/browser-profile)
+                                   claude.ai · cursor.com · gemini.google.com · muse.ai  → quits after the run
 ```
 
 ## Components
 
-### Chrome extension (`extension/`, Manifest V3, no build step)
+### Shared libraries (`lib/`)
 
 | File | Role |
 |---|---|
-| `manifest.json` | Host permissions for provider sites and `127.0.0.1:7878`; two content scripts; module service worker |
-| `content/hook.js` | Runs in the page's **MAIN** world at `document_start`. Wraps `fetch` and `XMLHttpRequest`. Same-origin JSON responses whose path matches `/usage|limit|quota|credit|billing|plan|subscription/` are posted to the isolated script, with query strings removed. |
-| `content/collector.js` | Runs in the **ISOLATED** world. It does three things: <br>(1) Relays hook captures to the service worker. <br>(2) Scrapes meters from valued ARIA progress bars and leaf elements reading "NN% used". The meter "card" is the largest ancestor containing exactly one percentage; the label is the nearest non-reset, non-icon line; the reset text is the line matching /reset/. It scrapes eagerly for 90 s on a usage page (decided via `whoami`), and at any other time when a valued progress bar is on screen. <br>(3) In background-refresh tabs, runs the provider's `openSteps` to reveal a usage dialog. |
-| `lib/providers.js` | Provider registry: hosts, usage URL, usage-page regex, JSON URL pattern, `parseJson`, optional `directFetch`. **Adding a provider = adding an entry here** (plus manifest hosts). |
-| `lib/parse.js` | Pure functions, unit-tested in Node: `makeMeter`, `classifyWindow`, `parseResetText`, `extractMeters` (generic JSON walker). |
-| `background.js` | Message hub, normalization, local cache (`storage.local.last`), offline queue (`storage.local.queue`, max 500), POST to `/api/ingest`, badge, periodic refresh via `chrome.alarms`. |
-| `offscreen.*` | Invisible page for hidden refresh: loads one usage page at a time in an iframe on command from `background.js` |
-| `popup.*` | Shows the cached latest meters per provider, service status, Refresh now / Dashboard / Options. Works even if the local service is down. |
-| `options.*` | Service URL, interval, background refresh, per-provider enable and usage URL override, debug capture, last refresh results. |
-
-**Capture strategies, in order of preference:**
-1. `directFetch()` from the service worker using the browser's cookies (Claude and Cursor). No tab needed. It can return `incomplete` (e.g. Cursor's Grok Bot POST is refused). The refresh loop then *also* loads the usage page so strategy 2 can fill the gap.
-2. JSON interception: the page's own XHR/fetch to its usage endpoint, parsed by `provider.parseJson`.
-3. DOM scraping of the rendered usage page (universal fallback; the only option for Gemini's batchexecute RPC).
-
-When JSON and DOM data for the same provider arrive within 60 s, the cached snapshot keeps the JSON version. Both are still sent to the service, and since meter ids usually differ they show up as separate meters. See ROADMAP: "meter id reconciliation".
-
-**Background refresh.** On every alarm, `doRefresh()` goes through the enabled providers in order:
-1. Try `directFetch`.
-2. If that gives nothing or is `incomplete`, and a usage URL is known, load the page:
-   - **`hidden`** (default): `loadHidden()` makes sure there's a session DNR rule and an offscreen document (`offscreen.html`/`offscreen.js`). The offscreen document puts the URL in a 1280×900 iframe, and the content scripts (`all_frames`) run inside it. Frames with no tab count as background-refresh frames, so Muse's `openSteps` run there too. The `whoami` call records whether the page script ran at all, which feeds the diagnostic message.
-   - **`window`**: one minimized, unfocused window; one tab per provider.
-3. Wait up to 45 s for a capture, then 4 s more for follow-up calls.
-4. Unload, and finally close the offscreen document or window.
-
-Results are saved to `storage.local.lastRefresh` after each provider (`done: true` once the run completes) and shown in Options. During a run, `withKeepAlive` calls a cheap extension API every 20 s; otherwise Chrome stops the MV3 service worker after about 30 s idle, partway through a page wait.
+| `parse.js` | Pure helpers: `makeMeter`, `classifyWindow`, `parseResetText`, `extractMeters` (generic JSON walker), `normalizeDomMeters` |
+| `providers.js` | Provider parsers: `parseClaudeUsage`, `parseCursorUsage`, `parseCursorGrokBot`, plus `MUSE_OPEN_STEPS` |
+| `scrape-dom.js` | Classic script injected into pages. It defines `TokenTrackingDom.scrape()`, which finds meters from "NN% used" text and valued ARIA progress bars (the meter "card" is the largest ancestor with exactly one percentage; the label is the nearest non-reset, non-icon line; the reset text is the line matching /reset/). It also defines `runOpenSteps()`, which does full pointer presses and matches text on the first line. |
 
 ### Local service (`server/`, Node ≥ 22.13, zero dependencies)
 
 | File | Role |
 |---|---|
-| `src/index.js` | Starts the HTTP server on `127.0.0.1` |
-| `src/server.js` | Routing, request security gate (Host and Origin checks), validation, static dashboard, debug capture writer |
+| `src/index.js` | Starts the HTTP server on `127.0.0.1` and the headless refresh timer; exits when the parent menu bar app dies (`TOKENTRACKING_PARENT_PID`) |
+| `src/server.js` | Routing, request security gate (Host and Origin checks), `/api/status`, `/api/refresh`, static dashboard |
 | `src/db.js` | `node:sqlite` schema and queries; dedupes identical readings within 2 min |
 | `src/pacing.js` | Pacing math (below) |
 | `src/status.js` | Builds the `/api/status` view: latest reading per meter + pace + history |
@@ -92,23 +64,17 @@ An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with
 
 ## Data model
 
-**Wire format** (`POST /api/ingest`, body `{ snapshots: Snapshot[] }` or a single `Snapshot`):
+**Meter** (what parsers produce, stored one row per reading):
 
 ```jsonc
 {
-  "provider": "claude",                 // [a-z0-9._-], ≤32 chars
-  "source": "json:/api/organizations/:id/usage" ,  // or "dom", "api:…"
-  "plan": "claude_max",                 // optional
-  "capturedAt": "2026-10-10T12:00:00.000Z",
-  "meters": [{
-    "id": "five-hour",                  // stable per provider; slug of key/label
-    "label": "Current session (5h)",
-    "window": "session",                // session | daily | weekly | monthly | other
-    "usedPercent": 42,                  // 0–100 (clamped ≤1000)
-    "used": null, "limit": null, "unit": null,   // when absolute numbers are known
-    "resetsAt": "2026-10-10T15:00:00.000Z",
-    "resetText": "Resets in 3 hr"       // raw text, kept for debugging
-  }]
+  "id": "five-hour",                  // stable per provider; slug of key/label
+  "label": "Current session (5h)",
+  "window": "session",                // session | daily | weekly | monthly | other
+  "usedPercent": 42,                  // 0–100 (clamped ≤1000)
+  "used": null, "limit": null, "unit": null,   // when absolute numbers are known
+  "resetsAt": "2026-10-10T15:00:00.000Z",
+  "resetText": "Resets in 3 hr"       // raw text from the page, if any
 }
 ```
 
@@ -124,7 +90,7 @@ Window lengths: session 5 h, daily 24 h, weekly 168 h, monthly 730 h.
 - `expectedPercent = elapsed / windowLength × 100`. This is the white tick on the dashboard bar.
 
 **Burn rate (%/h)**
-- Preferred: the slope between the first and last readings in the *current* window, if they span at least 10 minutes. Readings count as the same window when their `resetsAt` is within 10 minutes.
+- Preferred: the slope between the first and last readings in the *current* window, if they span at least 10 minutes and 5% of the window. Readings count as the same window when their `resetsAt` is within 10 minutes.
 - Fallback: `usedPercent / hoursElapsed` since window start.
 
 **Projections**
@@ -136,7 +102,7 @@ Window lengths: session 5 h, daily 24 h, weekly 168 h, monthly 730 h.
 
 **Status**
 - `limited` when used ≥ 100
-- `over-pace` when `exhaustAt < resetsAt`
+- `over-pace` when `exhaustAt < resetsAt` (and at least 5% used)
 - `ahead` when used > expected + 10
 - otherwise `ok`
 - `unknown` when there's no percentage

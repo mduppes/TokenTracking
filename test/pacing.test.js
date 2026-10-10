@@ -38,6 +38,16 @@ test('ignores history from a previous window', () => {
   assert.equal(p.status, 'ok');
 });
 
+test('no over-pace from a short burst right after a reset', () => {
+  const resetsAt = iso(NOW.getTime() + 4.8 * H); // 12 min into a 5h window
+  const history = [
+    { usedPercent: 0, capturedAt: iso(NOW.getTime() - 0.2 * H), resetsAt },
+    { usedPercent: 3, capturedAt: NOW.toISOString(), resetsAt },
+  ];
+  const p = computePace({ usedPercent: 3, resetsAt, window: 'session', capturedAt: NOW.toISOString() }, history, NOW);
+  assert.notEqual(p.status, 'over-pace');
+});
+
 test('limited and unknown', () => {
   assert.equal(computePace({ usedPercent: 100, resetsAt: null, window: 'weekly' }, [], NOW).status, 'limited');
   assert.equal(computePace({ usedPercent: null, resetsAt: null, window: 'other' }, [], NOW).status, 'unknown');

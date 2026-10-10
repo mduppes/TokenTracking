@@ -1,10 +1,15 @@
 # TokenTracking
 
-One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset.
+One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset. It lives in your macOS menu bar.
 
 Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **Gemini (app)**, **Muse (Meta)**. Antigravity is planned (see [docs/PROVIDERS.md](docs/PROVIDERS.md) and [docs/ROADMAP.md](docs/ROADMAP.md)).
 
-It's **local-first**. A Chrome extension reads the usage pages you can already see, using the logins already in your browser. A small local service stores the history and works out pacing. No API keys, no accounts, no cloud.
+It's **local-first**:
+- **Refresh:** every 15 minutes a headless Chrome (no window, no Dock icon) uses its own logged-in profile to read each service's usage, then quits. Nothing runs in between.
+- **Storage:** a small local service stores the history and works out pacing.
+- **Display:** a menu bar app shows the result.
+
+No API keys, no accounts, no cloud, no browser extension.
 
 ## Features
 
@@ -16,107 +21,72 @@ It's **local-first**. A Chrome extension reads the usage pages you can already s
   - a budget (%/day, or %/hour when less than a day is left)
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
-- **Three views.**
-  - Web dashboard at http://127.0.0.1:7878 (card and table views, light and dark)
-  - Extension popup with a badge showing your highest usage %
-  - `npm run status` in the terminal
-- **Background refresh** every 15 minutes (configurable), with no visible tabs or windows:
-  - Claude and Cursor are fetched directly.
-  - Gemini, Muse and the Grok Bot fallback load in an invisible offscreen page (see [docs/SECURITY.md](docs/SECURITY.md) for the trade-off).
-  - A minimized-window mode is available in Options.
-- **Debug capture** to save raw responses when a provider changes its page, so parsers are easy to fix.
-
-## How data is collected
-
-| Service | Headless refresh (default) | Extension (optional) |
-|---|---|---|
-| Claude | ✅ JSON from claude.ai | ✅ direct |
-| Cursor + Grok Bot | ✅ JSON from cursor.com | ✅ direct |
-| Gemini | ✅ reads /usage | while you visit the page |
-| Muse | ✅ opens Settings, reads the bar | while you visit Settings |
-
-**Headless refresh** runs inside the local service. Every 15 minutes it starts Chrome invisibly (no window or Dock icon) using its own profile, reads everything, and quits. Nothing runs in between. It needs a one-time login (`npm run browser-login`). The **extension** is optional: it captures while you browse and can cover a service if headless stops working for it.
+- **Menu bar app:**
+  - **Title:** the most at-risk meter, e.g. `◔ 97%`. Hover it to see which meter that is.
+  - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
+  - **Lifecycle:** it starts and stops everything it needs.
+- **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
+- **Login notices.** When a service's login expires, the dashboard tells you to run `npm run browser-login`.
 
 ## Quick start
 
-Requirements: Node.js ≥ 22.13 (uses the built-in `node:sqlite`) and Chrome or another Chromium browser.
+Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Google Chrome, and the Xcode command line tools (for `swiftc`). There are no npm dependencies, so there's nothing to install.
 
-```bash
-npm start
-```
+1. **Log in once** in TokenTracking's own Chrome profile. A normal Chrome window opens with tabs for Claude, Cursor, Gemini and Muse. Log in to each, then **quit that window with Cmd+Q**.
+   ```bash
+   npm run browser-login
+   ```
+2. **Check it works.** It prints `ok` or `login` per service.
+   ```bash
+   npm run refresh
+   ```
+3. **Build the menu bar app:**
+   ```bash
+   npm run build:menubar
+   ```
+4. **Open it:**
+   ```bash
+   open build/TokenTracking.app
+   ```
 
-1. Run `npm start` to start the local service. It has no dependencies, so there's nothing to install.
-2. Run `npm run browser-login` once. A normal Chrome window opens with tabs for Claude, Cursor, Gemini and Muse. Log in to each, then quit that window with Cmd+Q.
-3. Run `npm run refresh` to test. It prints `ok` or `login` per service. After that, the service refreshes by itself every 15 minutes.
+### The menu bar app
 
-Optional: load the Chrome extension.
-2. Load the extension:
-   1. Open `chrome://extensions` and turn on **Developer mode**.
-   2. Click **Load unpacked** and pick the `extension/` folder.
-   3. Pin the TokenTracking icon.
-3. Make sure you're logged in to the services you use. Then click **Refresh now** in the popup, or just visit each usage page once:
-   - Claude: https://claude.ai/new#settings/usage
-   - Cursor + Grok Bot: https://cursor.com/dashboard/spending
-   - Gemini: https://gemini.google.com/usage
-   - Muse: https://muse.ai/ → bottom-left menu → Settings (General tab)
-4. Open the dashboard at http://127.0.0.1:7878, or run:
+- **What it shows:** the menu bar title is your **most at-risk meter**: the worst pace status first ("limit reached" > "will run out before reset" > "ahead of pace" > "on pace"), then the highest %. Hover the icon to see which service and meter it is. The gauge icon fills as usage rises. Clicking it opens the compact dashboard.
+- **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.
+- **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.
+- **Moving things:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
+- **Can't see the icon?** When the menu bar is full (common on a MacBook with a notch), macOS silently doesn't show new icons. TokenTracking detects this and falls back to a **Dock icon** that opens the same panel in a small window. To get the menu bar icon back, make room (turn off items in **System Settings → Menu Bar**, or Cmd-drag icons out), then relaunch the app.
 
-```bash
-npm run status
-```
-
-After changing extension code, click reload on `chrome://extensions`, then reload any open provider tabs.
-
-### Menu bar app (macOS 13+)
-
-```bash
-npm run build:menubar
-```
-
-```bash
-open build/TokenTracking.app
-```
-
-This adds an icon at the top right showing your **most at-risk meter**: the worst pace status first, then the highest %. The gauge icon fills as usage rises. Clicking it opens a compact dashboard with **Refresh now**, **Open dashboard** and **Quit**. It has no Dock icon.
-
-**The app is the only thing you need to run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`. Optional: add `build/TokenTracking.app` to **System Settings → General → Login Items** to start it at login. That's a one-time step, because rebuilding updates the app in place. The paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
-
-**Can't see the icon?** When the menu bar is full (common on a MacBook with a notch), macOS silently doesn't show new icons. TokenTracking detects this and falls back to a **Dock icon** that opens the same panel in a small window. To get the menu bar icon back, make room:
-- turn off a few items in **System Settings → Menu Bar**, or
-- Cmd-drag other icons out of the menu bar,
-
-then relaunch the app.
-
-### Try it with demo data
+### Try the UI with demo data
 
 ```bash
 npm run demo
 ```
 
 ```bash
-TOKENTRACKING_HOME=.tokentracking-demo npm start
+TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_HEADLESS=0 npm start
 ```
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `npm start` | Run the local service and dashboard on 127.0.0.1:7878 |
-| `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
-| `npm run browser-login` | Open the headless profile in a normal window to log in (`-- gemini` for one service) |
 | `npm run build:menubar` | Build the macOS menu bar app into `build/TokenTracking.app` |
+| `npm run browser-login` | Open the headless profile in a normal window to log in (`-- gemini` for one service) |
 | `npm run refresh` | Run one headless refresh now and print results (`-- claude muse` for some) |
+| `npm start` | Run the local service and dashboard on 127.0.0.1:7878 without the app |
+| `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
 | `npm run demo` | Write fake data to `.tokentracking-demo/` |
-| `npm test` | Run the test suite (`node:test`) |
+| `npm test` | Run the test suite (`node:test`, including real headless Chrome) |
 
 Environment variables:
 - `TOKENTRACKING_HOME`: data directory (default `~/.tokentracking`)
-- `TOKENTRACKING_PORT`: port (default `7878`; if you change it, update `manifest.json` host permissions and the Options service URL)
+- `TOKENTRACKING_PORT`: port (default `7878`)
 - `TOKENTRACKING_HEADLESS=0`: turn headless refresh off
-- `TOKENTRACKING_INTERVAL_MIN`: headless refresh interval (default 15, minimum 5)
-- `TOKENTRACKING_HEADLESS_SKIP`: comma-separated services to leave to the extension (e.g. `claude`)
+- `TOKENTRACKING_INTERVAL_MIN`: refresh interval (default 15, minimum 5)
+- `TOKENTRACKING_HEADLESS_SKIP`: comma-separated services to skip (e.g. `muse`)
 - `TOKENTRACKING_CHROME`: Chrome binary path (default `/Applications/Google Chrome.app/…`)
-- `TOKENTRACKING_EXTENSION_IDS`: comma-separated extension ids allowed to call the service (default: any `chrome-extension://` origin)
+- `TOKENTRACKING_URL`: service URL for the menu bar app (default `http://127.0.0.1:7878`)
 
 ## Documentation
 
@@ -126,15 +96,12 @@ Environment variables:
 | [docs/PROVIDERS.md](docs/PROVIDERS.md) | Per-service: where usage lives, how it's read, what's verified |
 | [docs/SECURITY.md](docs/SECURITY.md) | Threat model, what data is touched, privacy guarantees |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision records (why things are the way they are) |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next: cost-per-token, Antigravity, menu bar app, … |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next: cost-per-token, Antigravity, … |
 | [AGENTS.md](AGENTS.md) | Orientation for AI coding agents / new contributors |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ## Caveats
 
-None of the usage pages or endpoints this reads are official APIs, so they can change without notice. When a meter stops updating:
-1. Turn on debug capture in Options.
-2. Revisit the usage page.
-3. Fix the parser, following [AGENTS.md](AGENTS.md).
+None of the usage pages or endpoints this reads are official APIs, so they can change without notice. When a meter stops updating, run `npm run refresh -- <service>` and follow the verification loop in [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 This is meant for personal use, reading your own usage with your own logged-in session.

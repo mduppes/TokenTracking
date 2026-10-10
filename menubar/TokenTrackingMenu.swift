@@ -128,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         image?.isTemplate = true
         button.image = image
         button.title = " " + model.title
+        button.toolTip = model.tooltip
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
@@ -160,6 +161,7 @@ struct Status: Decodable {
 @MainActor
 final class StatusModel: ObservableObject {
     @Published var title = "…"
+    @Published var tooltip = "TokenTracking"
     @Published var symbol = "gauge.with.dots.needle.0percent"
     @Published var reachable = true
     @Published var refreshing = false
@@ -202,14 +204,16 @@ final class StatusModel: ObservableObject {
     /// Title = the most at-risk meter: worst pace status first, then highest % used.
     private func apply(_ s: Status) {
         let rank = ["limited": 4, "over-pace": 3, "ahead": 2, "ok": 1]
-        let meters = s.providers.flatMap { $0.meters }.filter { $0.usedPercent != nil }
-        guard let top = meters.max(by: { a, b in
-            let ra = rank[a.pace.status] ?? 0, rb = rank[b.pace.status] ?? 0
-            return ra != rb ? ra < rb : a.usedPercent! < b.usedPercent!
+        let meters = s.providers.flatMap { p in p.meters.map { (p.name, $0) } }.filter { $0.1.usedPercent != nil }
+        guard let (name, top) = meters.max(by: { a, b in
+            let ra = rank[a.1.pace.status] ?? 0, rb = rank[b.1.pace.status] ?? 0
+            return ra != rb ? ra < rb : a.1.usedPercent! < b.1.usedPercent!
         }), let pct = top.usedPercent else {
-            title = "–"; symbol = "gauge.with.dots.needle.0percent"; return
+            title = "–"; symbol = "gauge.with.dots.needle.0percent"; tooltip = "TokenTracking: no data yet"; return
         }
         title = "\(Int(pct.rounded()))%"
+        let paceText = ["limited": "limit reached", "over-pace": "will run out before reset", "ahead": "ahead of pace", "ok": "on pace"][top.pace.status] ?? ""
+        tooltip = "Most at risk: \(name) · \(top.label): \(Int(pct.rounded()))% used\(paceText.isEmpty ? "" : " (\(paceText))")"
         switch pct {
         case ..<25: symbol = "gauge.with.dots.needle.0percent"
         case ..<50: symbol = "gauge.with.dots.needle.33percent"
