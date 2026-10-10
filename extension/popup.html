@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { width: 340px; padding: 12px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    h1 { font-size: 14px; margin: 0; }
+    .prov { padding: 8px 0; border-top: 1px solid var(--line); }
+    .prov h2 { font-size: 13px; margin: 0 0 4px; display: flex; justify-content: space-between; }
+    .meter { margin: 4px 0 6px; }
+    .meter .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }
+    footer { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    #status { font-size: 11px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header><h1>TokenTracking</h1><span id="server" class="muted"></span></header>
+  <div id="list"></div>
+  <footer>
+    <button id="refresh">Refresh now</button>
+    <button id="dashboard">Dashboard</button>
+    <button id="options">Options</button>
+  </footer>
+  <div id="status" class="muted"></div>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

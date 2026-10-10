@@ -1,0 +1,112 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseResetText, classifyWindow, extractMeters, makeMeter } from '../extension/lib/parse.js';
+import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, providerForUrl } from '../extension/lib/providers.js';
+
+// Fixed "now": Saturday 2026-10-10 12:00 local time
+const NOW = new Date(2026, 9, 10, 12, 0, 0);
+
+test('relative reset text', () => {
+  assert.equal(parseResetText('Resets in 2 hr 14 min', NOW).getTime(), NOW.getTime() + (2 * 60 + 14) * 6e4);
+  assert.equal(parseResetText('resets in 3 days', NOW).getTime(), NOW.getTime() + 3 * 864e5);
+  assert.equal(parseResetText('Resets in 45m', NOW).getTime(), NOW.getTime() + 45 * 6e4);
+});
+
+test('weekday + time reset text', () => {
+  const d = parseResetText('Resets Thu 10:00 AM', NOW);
+  assert.equal(d.getDay(), 4);
+  assert.equal(d.getHours(), 10);
+  assert.ok(d > NOW && d - NOW < 7 * 864e5);
+  // Same weekday as today but earlier time → next week
+  const s = parseResetText('Resets Saturday 9am', NOW);
+  assert.equal(s.getDate(), 17);
+});
+
+test('month/day and time-only reset text', () => {
+  const d = parseResetText('Resets Oct 14', NOW);
+  assert.deepEqual([d.getMonth(), d.getDate()], [9, 14]);
+  const past = parseResetText('Renews Jan 3', NOW);
+  assert.equal(past.getFullYear(), 2027);
+  const t = parseResetText('Resets at 5:30 PM', NOW);
+  assert.deepEqual([t.getDate(), t.getHours(), t.getMinutes()], [10, 17, 30]);
+  const early = parseResetText('Resets at 9:00 AM', NOW);
+  assert.equal(early.getDate(), 11);
+  assert.equal(parseResetText('Resets tomorrow at 9am', NOW).getDate(), 11);
+  assert.equal(parseResetText('nothing here', NOW), null);
+  assert.equal(parseResetText('Resets monthly on Nov 1', NOW).getMonth(), 10);
+});
+
+test('ISO reset text', () => {
+  assert.equal(parseResetText('2026-10-12T09:00:00Z', NOW).toISOString(), '2026-10-12T09:00:00.000Z');
+});
+
+test('classifyWindow', () => {
+  assert.equal(classifyWindow('seven_day_opus'), 'weekly');
+  assert.equal(classifyWindow('five_hour'), 'session');
+  assert.equal(classifyWindow('Current session'), 'session');
+  assert.equal(classifyWindow('Billing cycle usage'), 'monthly');
+  assert.equal(classifyWindow('Daily limit'), 'daily');
+  assert.equal(classifyWindow('Credits'), 'other');
+});
+
+test('Claude usage JSON', () => {
+  const meters = parseClaudeUsage('', {
+    five_hour: { utilization: 42, resets_at: '2026-10-10T15:00:00Z' },
+    seven_day: { utilization: 71.5, resets_at: '2026-10-14T09:00:00Z' },
+    seven_day_opus: null,
+    extra_usage: { is_enabled: false },
+  });
+  assert.equal(meters.length, 2);
+  assert.deepEqual(meters.map((m) => [m.id, m.window, m.usedPercent]), [['five-hour', 'session', 42], ['seven-day', 'weekly', 71.5]]);
+  assert.equal(meters[0].label, 'Current session (5h)');
+  assert.equal(meters[1].resetsAt, '2026-10-14T09:00:00.000Z');
+});
+
+test('Cursor usage-summary (redacted real shape, 2026-10-10)', () => {
+  const meters = parseCursorUsage('', {
+    billingCycleStart: '2026-09-30T15:22:07.000Z', billingCycleEnd: '2026-10-30T15:22:07.000Z',
+    membershipType: 'pro', limitType: 'user', isUnlimited: false,
+    individualUsage: {
+      plan: { enabled: true, used: 2000, limit: 2000, remaining: 0, breakdown: { included: 2000, bonus: 29424, total: 31424 },
+        autoPercentUsed: 69.83111111111111, apiPercentUsed: 0, totalPercentUsed: 68.12791327913278 },
+      onDemand: { enabled: false, used: 0, limit: null, remaining: null },
+    },
+    teamUsage: {},
+  });
+  assert.deepEqual(meters.map((m) => [m.id, m.usedPercent, m.window]), [['total', 68.13, 'monthly'], ['auto', 69.83, 'monthly'], ['api', 0, 'monthly']]);
+  assert.equal(meters[0].resetsAt, '2026-10-30T15:22:07.000Z');
+});
+
+test('Cursor Grok Bot (get-sand-usage-status, redacted real shape)', () => {
+  const [m] = parseCursorGrokBot('', { currentPeriodStart: '2026-10-04T15:29:32.582Z', nextResetTimestampUtc: '2026-10-11T15:29:32.582Z', usagePercent: 85.54734, hasAvailableUsage: true });
+  assert.deepEqual([m.id, m.label, m.window, m.usedPercent, m.resetsAt], ['grok-bot', 'Grok Bot', 'weekly', 85.55, '2026-10-11T15:29:32.582Z']);
+  assert.deepEqual(parseCursorGrokBot('', {}), []);
+});
+
+test('generic extractor: used/limit pairs and epoch resets', () => {
+  const meters = extractMeters({ plan: 'pro', monthly: { used: 250, limit: 500, resetAt: 1792000000 } });
+  assert.equal(meters.length, 1);
+  assert.equal(meters[0].usedPercent, 50);
+  assert.equal(meters[0].window, 'monthly');
+  assert.equal(meters[0].resetsAt, new Date(1792000000 * 1000).toISOString());
+});
+
+test('generic extractor: arrays of named models', () => {
+  const meters = extractMeters({ models: [{ name: 'gpt-x', percentUsed: 10 }, { name: 'claude-y', percentUsed: 20 }] });
+  assert.deepEqual(meters.map((m) => m.label), ['gpt-x', 'claude-y']);
+});
+
+test('makeMeter clamps and slugs', () => {
+  const m = makeMeter({ label: 'Weekly · Opus', usedPercent: 1234 });
+  assert.equal(m.id, 'weekly-opus');
+  assert.equal(m.usedPercent, 1000);
+  assert.equal(m.window, 'weekly');
+});
+
+test('providerForUrl', () => {
+  assert.equal(providerForUrl('https://claude.ai/new#settings/usage').id, 'claude');
+  assert.equal(providerForUrl('https://www.cursor.com/dashboard').id, 'cursor');
+  assert.equal(providerForUrl('https://gemini.google.com/usage').id, 'gemini');
+  assert.equal(providerForUrl('https://example.com/'), null);
+  assert.equal(providerForUrl('https://notclaude.ai/'), null);
+});

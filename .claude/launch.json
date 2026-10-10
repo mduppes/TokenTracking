@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "demo-dashboard",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["TOKENTRACKING_HOME=.tokentracking-demo", "TOKENTRACKING_PORT=7879", "node", "--disable-warning=ExperimentalWarning", "server/src/index.js"],
+      "port": 7879
+    }
+  ]
+}

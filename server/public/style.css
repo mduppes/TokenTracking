@@ -1,0 +1,66 @@
+:root {
+  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --line: #e4e3df; --track: #ebeae6;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+  --series-1: #2a78d6;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --pace-tick: #0b0b0b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-0: #111110; --surface-1: #1a1a19; --line: #2e2e2c; --track: #2a2a28;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --pace-tick: #ffffff;
+  }
+}
+:root[data-theme="dark"] {
+  --surface-0: #111110; --surface-1: #1a1a19; --line: #2e2e2c; --track: #2a2a28;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --series-1: #3987e5; --pace-tick: #ffffff;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px 16px 48px; background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  max-width: 1200px; margin-inline: auto;
+}
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.sub { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
+button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-1); color: var(--text-primary); cursor: pointer; }
+button:hover { border-color: var(--text-muted); }
+
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.card h2 { font-size: 15px; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card h2 .meta { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.meter { margin-top: 16px; }
+.meter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.meter-label { color: var(--text-secondary); font-size: 13px; }
+.meter-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.meter-value small { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+
+.track { position: relative; height: 8px; background: var(--track); border-radius: 4px; margin: 6px 0; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--pace-tick); border-radius: 1px; box-shadow: 0 0 0 2px var(--surface-1); }
+
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.s-ok { background: var(--good); } .s-ahead { background: var(--warning); } .s-over-pace { background: var(--serious); } .s-limited { background: var(--critical); } .s-unknown { background: var(--text-muted); }
+.details { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; }
+.stale { color: var(--serious); }
+
+svg.spark { display: block; width: 100%; height: 36px; margin-top: 6px; overflow: visible; }
+svg.spark path.line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+svg.spark line.cross { stroke: var(--text-muted); stroke-width: 1; }
+svg.spark circle { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+
+#tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); z-index: 10; }
+
+.empty { background: var(--surface-1); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; color: var(--text-secondary); }
+.empty code { background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
+table { width: 100%; border-collapse: collapse; background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { color: var(--text-secondary); font-weight: 500; border-top: none; }
+#table { overflow-x: auto; }

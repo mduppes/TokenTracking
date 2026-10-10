@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TokenTracking options</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 20px; } h2 { font-size: 15px; margin-top: 28px; }
+    label { display: block; margin: 10px 0; }
+    input[type=text], input[type=number] { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font: inherit; }
+    input[type=number] { width: 100px; }
+    table { width: 100%; border-collapse: collapse; } td { padding: 6px 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+    pre { background: var(--card); padding: 8px; border-radius: 6px; overflow: auto; font-size: 12px; }
+    #saved { margin-left: 8px; color: var(--ok); }
+  </style>
+</head>
+<body>
+  <h1>TokenTracking</h1>
+  <p class="muted">The extension reads your usage pages using the logins already in this browser and sends the numbers only to the local service below. Nothing goes anywhere else.</p>
+
+  <h2>Local service</h2>
+  <label>Service URL <input type="text" id="serverUrl"></label>
+  <button id="test">Test connection</button> <span id="testResult" class="muted"></span>
+
+  <h2>Refresh</h2>
+  <label><input type="checkbox" id="backgroundRefresh"> Background refresh: periodically load each usage page, read it, close it</label>
+  <label>Every <input type="number" id="intervalMin" min="5" max="240"> minutes</label>
+  <label>Load pages
+    <select id="refreshMode">
+      <option value="hidden">hidden (invisible, no window)</option>
+      <option value="window">in a minimized window</option>
+    </select>
+  </label>
+  <p class="muted">Hidden mode removes the "don't embed me" headers (X-Frame-Options, Content-Security-Policy) only from provider pages loaded inside this extension's invisible page, never in your tabs. That hidden copy runs without its CSP for a few seconds; see SECURITY.md. If a provider shows "page script never ran" in the results below, switch to the minimized window.</p>
+  <p class="muted">With background refresh off, data updates only when you visit a usage page yourself. Claude is fetched directly without opening a tab when possible.</p>
+
+  <h2>Providers</h2>
+  <table id="providers"></table>
+
+  <h2>Diagnostics</h2>
+  <label><input type="checkbox" id="debugCapture"> Debug capture: also send raw captured responses to the local service (saved under <code>~/.tokentracking/debug/</code>). Use it when a provider's parsing breaks; turn it off afterwards.</label>
+  <p>Last refresh results:</p>
+  <pre id="lastRefresh">—</pre>
+
+  <p><button id="save">Save</button><span id="saved"></span></p>
+  <script src="options.js" type="module"></script>
+</body>
+</html>
