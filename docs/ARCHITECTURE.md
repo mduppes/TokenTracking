@@ -55,7 +55,7 @@ Scheduling lives in `index.js` (first run 10 s after start, then every N minutes
 ### Menu bar app (`menubar/TokenTrackingMenu.swift`)
 
 An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with plain `swiftc`. It's not SwiftUI `MenuBarExtra`; the status item gives more control and visibility checks. by `scripts/build-menubar.sh`. There's no Xcode project; the app is ad-hoc signed, with `LSUIElement` (no Dock icon) and `NSAllowsLocalNetworking`.
-- **Title:** polls `GET /api/status` every 60 s and shows the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %) with a gauge symbol.
+- **Title:** polls `GET /api/status` every 60 s. `MenuBarGlyphs` draws one SF Symbol plus one character per service (the tens of % used by its worst meter, `–` at the limit) into a single template image. Grok Bot is split out of Cursor by meter id. The tooltip lists per-service values plus the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %). With no data, it shows a gauge symbol.
 - **Panel:** a `WKWebView` of `/?compact` (the dashboard's single-column mode), with Refresh now (`POST /api/refresh`), Open dashboard and Quit.
 - **Service down:** if the service is unreachable, the panel says so.
 - **Full menu bar fallback:** 2 s after launch, if the status item's window isn't visible, the app switches to a regular activation policy (Dock icon) and shows the panel in a window. Clicking the Dock icon reopens it. On macOS 26, status item windows are owned by "Control Center" in `CGWindowList`.

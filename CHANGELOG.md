@@ -3,6 +3,11 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- Dashboard: a **countdown pill** on every meter ("↻ 1d 3h", colored by pace) and a **"Resets next"** list across all services, soonest first. The header shows "Updated 3m ago · next refresh in 12m" (`headless.nextAt` / `intervalMin` in `/api/status`).
+- Menu bar: **one icon + digit per service** (Claude ✳, Cursor ➚, Grok Bot ⚡, Gemini ✦, Muse Ⓜ). The digit is the tens of % used by that service's worst meter (0–9), `–` means at the limit and `?` means no reading. It's drawn as one template image, so it adapts to light and dark menu bars. The tooltip lists every service.
+### Changed
+- The refresh timer reschedules after each run (`setTimeout` chain), so the next-refresh time is exact.
 
 ## [0.5.0] - 2026-10-10
 ### Removed

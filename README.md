@@ -19,10 +19,11 @@ No API keys, no accounts, no cloud, no browser extension.
   - your current burn rate and projected % at reset
   - when you'd run out at this rate
   - a budget (%/day, or %/hour when less than a day is left)
+- **When it frees up.** Every meter has a countdown pill to its reset, and a "Resets next" list shows what frees up soonest across all services.
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
 - **Menu bar app:**
-  - **Title:** the most at-risk meter, e.g. `◔ 97%`. Hover it to see which meter that is.
+  - **Title:** one icon and digit per service, e.g. `✳7 ➚7 ⚡8 ✦0 Ⓜ9`. The digit is the tens of % used by that service's worst meter, `–` means at the limit, and hovering shows the exact numbers.
   - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
   - **Lifecycle:** it starts and stops everything it needs.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
@@ -51,7 +52,10 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 
 ### The menu bar app
 
-- **What it shows:** the menu bar title is your **most at-risk meter**: the worst pace status first ("limit reached" > "will run out before reset" > "ahead of pace" > "on pace"), then the highest %. Hover the icon to see which service and meter it is. The gauge icon fills as usage rises. Clicking it opens the compact dashboard.
+- **What it shows:** one icon per service, each with a digit for that service's worst meter:
+  - **Icons:** ✳ Claude, ➚ Cursor, ⚡ Grok Bot, ✦ Gemini, Ⓜ Muse.
+  - **The digit** is the tens of % used: `7` = 70–79%, `9` = 90–99%, `–` = at the limit, `?` = no reading yet.
+  - **Hover** for exact numbers and the most at-risk meter. Click for the compact dashboard.
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.
 - **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.
 - **Moving things:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
