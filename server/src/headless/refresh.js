@@ -7,6 +7,7 @@ import { launchChrome, openPage, profileInUse, browserIdentity } from './chrome.
 import { execFileSync } from 'node:child_process';
 import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, MUSE_OPEN_STEPS } from '../../../lib/providers.js';
 import { normalizeDomMeters } from '../../../lib/parse.js';
+import { readAntigravity } from '../local/antigravity.js';
 
 const SCRAPER_PATH = fileURLToPath(new URL('../../../lib/scrape-dom.js', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -108,7 +109,24 @@ export function runHeadlessRefresh(opts) {
 async function doRun({ db, config, only = null, log = () => {} }) {
   const at = new Date().toISOString();
   const results = {};
-  const tasks = TASKS.filter((t) => (!only || only.includes(t.id)) && !config.headless.disabled.includes(t.id));
+  const wanted = (id) => (!only || only.includes(id)) && !config.headless.disabled.includes(id);
+  const tasks = TASKS.filter((t) => wanted(t.id));
+
+  // Local sources first: no Chrome needed (ADR-011).
+  if (wanted('antigravity')) {
+    const started = Date.now();
+    try {
+      const r = await readAntigravity();
+      if (r.status === 'ok') {
+        const snap = { capturedAt: new Date().toISOString(), source: 'local:language-server', plan: r.plan };
+        for (const m of r.meters) db.addSnapshot('antigravity', snap, m);
+        results.antigravity = { status: 'ok', meters: r.meters.length };
+      } else results.antigravity = { status: r.status, message: r.message };
+    } catch (e) { results.antigravity = { status: 'error', message: e.message }; }
+    results.antigravity.ms = Date.now() - started;
+    log(`antigravity: ${results.antigravity.status}${results.antigravity.message ? ` (${results.antigravity.message})` : ''}`);
+  }
+  if (!tasks.length) return save(config, { at, results });
 
   if (!existsSync(config.headless.profileDir)) {
     for (const t of tasks) results[t.id] = { status: 'login', message: 'no browser profile yet: run `npm run browser-login`' };

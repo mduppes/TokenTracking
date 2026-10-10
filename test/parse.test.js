@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseResetText, classifyWindow, extractMeters, makeMeter } from '../lib/parse.js';
-import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot } from '../lib/providers.js';
+import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, parseAntigravityStatus } from '../lib/providers.js';
 
 // Fixed "now": Saturday 2026-10-10 12:00 local time
 const NOW = new Date(2026, 9, 10, 12, 0, 0);
@@ -101,4 +101,25 @@ test('makeMeter clamps and slugs', () => {
   assert.equal(m.id, 'weekly-opus');
   assert.equal(m.usedPercent, 1000);
   assert.equal(m.window, 'weekly');
+});
+
+test('Antigravity GetUserStatus: models grouped into quota pools (redacted real shape)', () => {
+  const now = new Date('2026-10-10T19:55:00Z');
+  const cfg = (label, remainingFraction, resetTime) => ({ label, modelOrAlias: { model: 'MODEL_X' }, quotaInfo: { remainingFraction, resetTime } });
+  const { meters, plan } = parseAntigravityStatus({ userStatus: {
+    planStatus: { planInfo: { planName: 'Pro' } },
+    cascadeModelConfigData: { clientModelConfigs: [
+      cfg('Claude Opus 5.5 (High)', 0.4895844, '2026-10-15T17:42:53Z'),
+      cfg('Gemini 3.8 Flash (High)', 1, '2026-10-10T23:55:21Z'),
+      cfg('Claude Sonnet 5.5 (Low)', 0.4895844, '2026-10-15T17:42:53Z'),
+      cfg('GPT-OSS 120B (Medium)', 0.4895844, '2026-10-15T17:42:53Z'),
+      cfg('Gemini 3.1 Pro (Low)', 1, '2026-10-10T23:55:21Z'),
+      { label: 'No quota model' },
+    ] },
+  } }, now);
+  assert.equal(plan, 'Pro');
+  assert.deepEqual(meters.map((m) => [m.id, m.label, m.window, m.usedPercent]), [
+    ['pool-claude-gpt-oss', 'Claude + GPT-OSS models', 'weekly', 51.04],
+    ['pool-gemini', 'Gemini models', 'session', 0],
+  ]);
 });

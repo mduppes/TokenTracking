@@ -43,6 +43,7 @@
 | `refresh.js` | `TASKS` (one per provider: URL, `loggedOut(href, text)`, `read(page)`), `runHeadlessRefresh()` (single-flight), and the last-run status in `~/.tokentracking/headless-status.json` |
 
 Flow per run:
+0. Local sources first, no Chrome needed: Antigravity's language server (`server/src/local/antigravity.js`, ADR-011).
 1. Skip if there's no profile yet, or if the `browser-login` window is open (the profile is locked).
 2. Launch Chrome and build the identity.
 3. For each task, open a page, navigate, wait 2.5 s, then check for a logged-out state.

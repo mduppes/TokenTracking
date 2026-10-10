@@ -9,7 +9,7 @@ A personal, local-first tracker for AI **subscription** usage limits: Claude, Cu
 - **No browser extension** since v0.5 (ADR-010).
 
 ## Hard constraints (don't violate without a new ADR and the user's sign-off)
-- **No secrets.** Don't read cookies, the Keychain or CLI token files, and don't ask for API keys (ADR-002, SECURITY.md). The headless profile's logins stay inside Chrome; our code never reads them.
+- **No secrets.** Don't read cookies, the Keychain or CLI token files, and don't ask for API keys (ADR-002, SECURITY.md). The headless profile's logins stay inside Chrome; our code never reads them. **The one exception is ADR-011:** Antigravity's local language-server CSRF token is read from its process args per request, used only for a 127.0.0.1 call, and never logged or stored. Don't widen it without a new ADR.
 - **Nothing leaves the machine.** No telemetry, no third-party requests and no CDNs in the dashboard.
 - **Zero dependencies** (ADR-003): Node built-ins only, and the Swift app is built with plain `swiftc`.
 - **Read-only** against provider sites.
@@ -20,7 +20,8 @@ A personal, local-first tracker for AI **subscription** usage limits: Claude, Cu
 ```
 lib/                  shared, pure-ish: parse.js (meters, reset text), providers.js (parsers), scrape-dom.js (page reader, injected)
 server/src/           Node service: index (timer, parent-PID watch), server (HTTP), db, pacing, status, cli
-server/src/headless/  chrome.js = launch + CDP over pipe + browser identity; refresh.js = per-provider TASKS
+server/src/headless/  chrome.js = launch + CDP over pipe + browser identity; refresh.js = per-provider TASKS (+ local sources)
+server/src/local/     antigravity.js = local language-server reader (ADR-011)
 server/public/        dashboard (vanilla JS; /?compact = menu bar panel view)
 menubar/              macOS menu bar app (NSStatusItem + popover/WKWebView) + AppIcon.icns; scripts/build-menubar.sh builds it
 assets/icon.svg       app icon source → npm run build:icon

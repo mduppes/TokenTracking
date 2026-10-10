@@ -11,7 +11,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 | Grok Bot (Cursor) | same page | In-page `POST /api/dashboard/get-sand-usage-status` `{}` → `parseCursorGrokBot` | Weekly | ✅ 2026-10-10 |
 | Gemini (app) | `https://gemini.google.com/usage` | DOM: `scrape-dom.js` ("NN% used" text) | "Current usage" (short rolling window) + "Weekly limit" | ✅ 2026-10-10 |
 | Muse (Meta) | `https://muse.ai/` | DOM: `MUSE_OPEN_STEPS` (menu → Settings), then the dialog's ARIA progress bar | Weekly limit for the plan | ✅ 2026-10-10 |
-| Antigravity | none on the web | (see ROADMAP) | Per-model quota | ⛔ |
+| Antigravity | none on the web; desktop app must be running | Local language server `GetUserStatus` (127.0.0.1, CSRF token from its process args; ADR-011) → `parseAntigravityStatus` | One meter per quota pool, e.g. "Claude + GPT-OSS models" (weekly), "Gemini models" (~5h) | ✅ 2026-10-10 |
 
 **Logged-out detection** (`loggedOut(href, text)`), as observed 2026-10-10:
 
@@ -66,6 +66,16 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
   - The menu opens on **pointerdown**, so a full pointer/mouse press is dispatched (not `el.click()`).
   - The item's text is "Settings\n⌘,", so text matching uses the **first line**.
 - The meter label is the plan name, so it gets a new meter id if you change plans.
+
+### Antigravity
+- **Process.** `…/Antigravity.app/Contents/Resources/bin/language_server --standalone --override_ide_name antigravity --subclient_type hub --https_server_port 0 --csrf_token <token> …` (app 2.22.0). The port is random, so it's found with `lsof`. It listens on two ports; the first answers HTTPS.
+- **Request.** `POST https://127.0.0.1:<port>/exa.language_server_pb.LanguageServerService/GetUserStatus`
+  - headers: `content-type: application/json`, `connect-protocol-version: 1`, `x-codeium-csrf-token: <token>`
+  - body: `{"metadata":{"ideName":"antigravity","extensionName":"antigravity","locale":"en"}}`
+- **Response.** `userStatus.cascadeModelConfigData.clientModelConfigs[]` = `{ label, modelOrAlias.model, quotaInfo: { remainingFraction (0–1), resetTime } }`, plus `userStatus.planStatus.planInfo.planName`. Models in the same pool report identical values.
+  - Observed pools: Claude Opus/Sonnet + GPT-OSS share a weekly pool; all Gemini models share a ~5h pool.
+- **Window guess:** `session` if the reset is ≤6h away, `daily` if ≤26h, else `weekly`.
+- **"Antigravity IDE".** A separate app with no language server of its own was also running; only the "Antigravity" app's server is used.
 
 ## Verification loop (when a provider breaks)
 

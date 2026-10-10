@@ -1,6 +1,6 @@
 import { computePace, WINDOW_HOURS } from './pacing.js';
 
-export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)' };
+export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)', antigravity: 'Antigravity' };
 const WINDOW_ORDER = { session: 0, daily: 1, weekly: 2, monthly: 3, other: 4 };
 const DEFAULT_STALE_AFTER_MS = 60 * 6e4;
 const HIDE_AFTER_DAYS = 7;

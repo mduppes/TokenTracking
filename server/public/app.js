@@ -114,7 +114,7 @@ function drawSpark(svg, m) {
   svg.onpointerleave = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
 }
 
-const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse' };
+const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse', antigravity: 'Antigravity' };
 
 /** "claude_max" → "Max", "pro" → "Pro" */
 const planLabel = (plan) => String(plan).replace(/^claude_/i, '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
@@ -142,7 +142,7 @@ function renderNotices() {
   // 2. Refresh problems for services that aren't already listed as stale.
   const entries = Object.entries(results).filter(([id]) => !staleIds.has(id));
   const login = entries.filter(([, r]) => r.status === 'login').map(([id]) => id);
-  const other = entries.filter(([, r]) => r.status !== 'ok' && r.status !== 'login');
+  const other = entries.filter(([, r]) => r.status !== 'ok' && r.status !== 'login' && r.status !== 'skipped');
   const when = h.at ? ` <span class="muted">(last refresh ${ago(h.at)})</span>` : '';
   $('#notices').innerHTML = [
     ...staleNotes,

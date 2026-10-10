@@ -3,7 +3,7 @@
 ## Principles
 
 1. **Nothing leaves your machine.** The only network traffic is the headless browser visiting the four provider sites you use, plus local traffic on `127.0.0.1`. There is no telemetry, analytics or cloud sync.
-2. **No secrets handled by our code.** There are no API keys and no stored passwords. Your logins live inside a dedicated Chrome profile, and Chrome uses them. Our code never reads cookies or tokens.
+2. **No secrets handled by our code** (one scoped exception, below). There are no API keys and no stored passwords. Your logins live inside a dedicated Chrome profile, and Chrome uses them. Our code never reads cookies or login tokens.
 3. **Read-only.** We only read usage. Nothing changes settings, sends messages or touches billing.
 4. **Minimal storage.** Only usage meters (label, %, reset time, plan name) are stored.
 
@@ -25,6 +25,13 @@ File permissions: the data dir and profile are created `0700`; the DB and status
 - **Short-lived.** Chrome runs only during a refresh (a few seconds per provider). It's then told to quit, and killed if it lingers.
 - **Read-only.** Pages are only read. The one click sequence (Muse) opens Settings.
 - **Identity.** At the user's request, the browser presents as their normal Chrome (User-Agent, Client Hints, `navigator.webdriver`, languages, screen). It's a personal, low-frequency read of the user's own accounts. Keep the interval at 15 minutes or more.
+
+## Antigravity (local language server, ADR-011)
+
+- **The exception.** Antigravity's quota is only available from the desktop app's local language server, which requires a per-session CSRF token taken from the server's own command-line arguments. TokenTracking reads it with `ps` at refresh time and uses it for **one read-only request to 127.0.0.1** (`GetUserStatus`).
+- **Handling.** The token is never logged, stored, written to disk or sent anywhere else. It's a local session token for that process, not your Google login, and it changes whenever Antigravity restarts.
+- **TLS.** The server uses a self-signed certificate, so certificate verification is disabled for that localhost request only.
+- **Opting out.** Set `TOKENTRACKING_HEADLESS_SKIP=antigravity`.
 
 ## Local service
 

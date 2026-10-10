@@ -4,11 +4,12 @@
 
 One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset. It lives in your macOS menu bar.
 
-Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **Gemini (app)**, **Muse (Meta)**. Antigravity is planned (see [docs/PROVIDERS.md](docs/PROVIDERS.md) and [docs/ROADMAP.md](docs/ROADMAP.md)).
+Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **Gemini (app)**, **Muse (Meta)**, and **Antigravity** (per quota pool, while the app is running). See [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 It's **local-first**:
 - **Refresh:** every 15 minutes a headless Chrome (no window, no Dock icon) uses its own logged-in profile to read each service's usage, then quits. Nothing runs in between.
 - **Storage:** a small local service stores the history and works out pacing.
+- **Antigravity:** read from the desktop app's own local server while it's running (no browser; see [SECURITY](docs/SECURITY.md)).
 - **Display:** a menu bar app shows the result.
 
 No API keys, no accounts, no cloud, no browser extension.
@@ -71,7 +72,7 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 ### The menu bar app
 
 - **What it shows:** one icon per service, each with a digit for that service's worst meter:
-  - **Icons:** ✳ Claude, ➚ Cursor, ✕ Grok Bot, Ⓜ Muse, ✦ Gemini.
+  - **Icons:** ✳ Claude, ➚ Cursor, ✕ Grok Bot, Ⓜ Muse, ✦ Gemini, ⇧ Antigravity.
   - **The number** is the % used (0–99), `––` = at the limit, `??` = no reading yet.
   - **Hover** for exact numbers and the most at-risk meter. Click for the compact dashboard.
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.

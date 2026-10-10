@@ -173,6 +173,7 @@ enum MenuBarGlyphs {
         ("grok-bot", "xmark", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
         ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
         ("gemini", "sparkle", "Gemini", { p, _ in p == "gemini" }),
+        ("antigravity", "arrow.up.circle", "Antigravity", { p, _ in p == "antigravity" }),
     ]
 
     /// Two characters: % used 0–99 (single digits padded with a trailing figure space so the width is

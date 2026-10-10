@@ -109,3 +109,14 @@ It doesn't attempt deeper fingerprint spoofing.
 - A smaller attack surface: the service accepts browser requests only from its own dashboard.
 - Updates come only from scheduled or manual refreshes, not instantly while browsing.
 - The extension remains in git history (tag before this change: `main` at 3f504fa) if it's ever needed again.
+
+## ADR-011: Antigravity via its local language server (a scoped exception to "no secrets") (2026-10-10)
+
+**Context.** Antigravity has no web usage page; quota is only shown inside the desktop app. While the app runs, its bundled `language_server` listens on 127.0.0.1 (self-signed HTTPS) and answers `LanguageServerService/GetUserStatus` with per-model `quotaInfo` (`remainingFraction`, `resetTime`). Calls require the server's CSRF token, which is passed on its command line (`--csrf_token`). The same approach is used by CodexBar. The user chose this option explicitly.
+**Decision.** `server/src/local/antigravity.js` finds the process with `ps`, reads the token from its arguments **at call time**, finds its listening ports with `lsof`, and makes one localhost request. Models are grouped into quota pools by identical (`remainingFraction`, `resetTime`), giving one meter per pool. This runs first in every refresh and needs no Chrome. If the app isn't running, the result is `skipped`, and the meters go stale after about 2 missed refreshes.
+**Rules for the exception.**
+- The token is never logged, stored, written to disk or sent anywhere except that 127.0.0.1 request.
+- Only `GetUserStatus` (read-only) is called.
+- It can be disabled with `TOKENTRACKING_HEADLESS_SKIP=antigravity`.
+- No other credential reading is allowed without a new ADR.
+**Consequences.** Antigravity quotas are tracked whenever the app is open, with no logins and no Chrome. The endpoint is internal and undocumented, so it can change with app updates (the version seen here was 2.22.0).
