@@ -5,7 +5,8 @@ set -eu
 cd "$(dirname "$0")/.."
 APP=build/TokenTracking.app
 # Update the bundle in place (don't delete it) so Login Items and other references keep pointing at it.
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp menubar/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"  # regenerate with: npm run build:icon
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -16,6 +17,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key><string>local.tokentracking.menubar</string>
   <key>CFBundleExecutable</key><string>TokenTracking</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>0.5.0</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <!-- Menu bar only: no Dock icon, no app menu -->
@@ -39,5 +41,6 @@ SWIFT
 swiftc -O -parse-as-library -target "$(uname -m)-apple-macos13.0" \
   -o "$APP/Contents/MacOS/TokenTracking" menubar/*.swift "$GEN"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || true  # ad-hoc signature for local use
+touch "$APP"  # nudge Finder to pick up the icon
 echo "Built $APP"
 echo "Run it:  open $APP"

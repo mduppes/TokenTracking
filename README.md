@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="128" alt="TokenTracking app icon: a usage ring with clock hands"></p>
+
 # TokenTracking
 
 One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset. It lives in your macOS menu bar.
@@ -97,6 +99,7 @@ TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_HEADLESS=0 npm start
 | `npm start` | Run the local service and dashboard on 127.0.0.1:7878 without the app |
 | `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
 | `npm run demo` | Write fake data to `.tokentracking-demo/` |
+| `npm run build:icon` | Re-render `assets/icon.svg` into `menubar/AppIcon.icns` and `docs/images/icon.png` |
 | `npm run screenshots` | Regenerate `docs/images/` from demo data (headless Chrome + swift) |
 | `npm test` | Run the test suite (`node:test`, including real headless Chrome) |
 

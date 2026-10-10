@@ -4,6 +4,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- **App icon** ("reset ring": a usage ring with clock hands). Source is `assets/icon.svg`; `npm run build:icon` renders every macOS size with headless Chrome and packs `menubar/AppIcon.icns` with `iconutil`, and `build:menubar` bundles it.
 - MIT license.
 - README screenshots (`docs/images/`), generated from demo data by `npm run screenshots` (dashboard light/dark, menu bar panel, menu bar glyphs).
 - README: clone step and a disclaimer (not affiliated with the providers; relies on undocumented endpoints).

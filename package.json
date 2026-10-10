@@ -15,7 +15,8 @@
     "browser-login": "node --disable-warning=ExperimentalWarning scripts/browser-login.js",
     "refresh": "node --disable-warning=ExperimentalWarning scripts/refresh-once.js",
     "build:menubar": "sh scripts/build-menubar.sh",
-    "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.js"
+    "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.js",
+    "build:icon": "node --disable-warning=ExperimentalWarning scripts/build-icon.js"
   },
   "license": "MIT"
 }

@@ -22,7 +22,8 @@ lib/                  shared, pure-ish: parse.js (meters, reset text), providers
 server/src/           Node service: index (timer, parent-PID watch), server (HTTP), db, pacing, status, cli
 server/src/headless/  chrome.js = launch + CDP over pipe + browser identity; refresh.js = per-provider TASKS
 server/public/        dashboard (vanilla JS; /?compact = menu bar panel view)
-menubar/              macOS menu bar app (NSStatusItem + popover/WKWebView); scripts/build-menubar.sh builds it
+menubar/              macOS menu bar app (NSStatusItem + popover/WKWebView) + AppIcon.icns; scripts/build-menubar.sh builds it
+assets/icon.svg       app icon source → npm run build:icon
 scripts/              browser-login, refresh-once, seed-demo, build-menubar
 test/                 node:test suites (headless.test.js drives real Chrome against fixtures)
 docs/                 ARCHITECTURE, PROVIDERS, SECURITY, DECISIONS, ROADMAP
