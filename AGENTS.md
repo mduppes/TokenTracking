@@ -3,10 +3,13 @@
 Read this first, then `docs/ARCHITECTURE.md`. The current state and next steps live in `docs/ROADMAP.md` and `CHANGELOG.md` → `[Unreleased]`.
 
 ## What this is
-This is a personal, local-first tracker for AI **subscription** usage limits: Claude, Cursor, Gemini app, Grok and Muse, with Antigravity planned. A Chrome extension reads each service's usage page with the user's existing browser session, and a zero-dependency Node service on 127.0.0.1:7878 stores snapshots in SQLite, computes pacing and serves a dashboard.
+This is a personal, local-first tracker for AI **subscription** usage limits: Claude, Cursor (including Grok Bot), Gemini app and Muse, with Antigravity planned. A zero-dependency Node service on 127.0.0.1:7878 refreshes usage with a short-lived headless Chrome (dedicated, logged-in profile), stores snapshots in SQLite, computes pacing and serves a dashboard. An optional Chrome extension can also capture usage from your normal browser.
+
+## Current direction (2026-10-10)
+Headless refresh in the local service (ADR-009) is the primary data path, on the `headless-refresh` branch until it has proven itself. The extension is optional and may be removed. Next up: a macOS menu bar app (ROADMAP).
 
 ## Hard constraints (don't violate without a new ADR and the user's sign-off)
-- **No secrets.** Don't read cookies, the Keychain, CLI token files, or ask for API keys (ADR-002, SECURITY.md).
+- **No secrets.** Don't read cookies, the Keychain or CLI token files, and don't ask for API keys (ADR-002, SECURITY.md). The headless profile's logins stay inside Chrome; our code never reads them.
 - **Nothing leaves the machine.** No telemetry, no third-party requests and no CDNs in the dashboard.
 - **Zero dependencies and no build step** (ADR-003). Use Node built-ins only, and keep the extension loadable unpacked.
 - **Read-only** against provider sites.
@@ -21,6 +24,7 @@ extension/            Chrome MV3 extension (load unpacked)
   content/collector.js DOM scraper + relay
   background.js       service worker: normalize, cache, POST, refresh
 server/src/           Node service (index, server, db, pacing, status, cli)
+server/src/headless/  headless Chrome refresher (chrome.js = CDP over pipe, refresh.js = per-provider TASKS)
 server/public/        dashboard (vanilla JS)
 test/                 node:test suites
 scripts/seed-demo.js  fake data for UI work
@@ -32,6 +36,8 @@ docs/                 ARCHITECTURE, PROVIDERS, SECURITY, DECISIONS, ROADMAP
 npm test                                     # must pass before you finish
 npm start                                    # service on :7878 (~/.tokentracking)
 npm run status                               # terminal view
+npm run browser-login                        # log in once in the headless profile (visible window)
+npm run refresh                              # one headless refresh now, prints per-service results
 npm run demo && TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_PORT=7879 npm start   # UI work with fake data
 ```
 `.claude/launch.json` has a `demo-dashboard` config (port 7879) for preview tools.

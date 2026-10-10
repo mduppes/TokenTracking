@@ -52,7 +52,7 @@ Each entry gives the context, the decision and its consequences. Append new ADRs
 **Decision.** Bind to 127.0.0.1, check the Host header (DNS rebinding), allow-list Origins (extension or self only), require JSON content-type, validate strictly, and never use permissive CORS. No pairing token for now. See SECURITY.md.
 **Consequences.** Web pages can't read or write data. Any installed Chrome extension could post data unless `TOKENTRACKING_EXTENSION_IDS` is set, which is accepted for a personal tool.
 
-## ADR-008: Hidden background refresh via an offscreen document (2026-10-10)
+## ADR-008: Hidden background refresh via an offscreen document (2026-10-10) (superseded by ADR-009 if headless holds up)
 
 **Context.** Gemini and Muse can only be read from their rendered pages. Opening them in a minimized window every 15 minutes made Chrome flicker in the Dock, which the user didn't want. A separate headless Chrome (run by the local service) would need a second browser profile with its own logins.
 **Decision.** By default (`refreshMode: 'hidden'`), background refresh loads usage pages in an iframe inside a `chrome.offscreen` document (reason `DOM_SCRAPING`). The content scripts run with `all_frames` inside it. Sites forbid framing, so a **session** declarativeNetRequest rule removes `X-Frame-Options` and `Content-Security-Policy` from responses that match all of these:
@@ -68,3 +68,34 @@ The minimized-window method stays available as `refreshMode: 'window'`.
 - Claude Code's automatic safety check flagged this as weakening security. The user approved it explicitly.
 - A site may still refuse to work when framed (frame-busting JavaScript, or cookies treated as third-party). Refresh results then say "page script never ran" or "page loaded but no usage found", and the user can switch that refresh to window mode.
 - Fallback if it doesn't hold up: a headless Chrome with a dedicated profile, run by the local service (ROADMAP).
+
+## ADR-009: Headless Chrome refresh, run by the local service only while refreshing (2026-10-10)
+
+**Context.**
+- Hidden refresh inside the extension (ADR-008) failed for Cursor: the framed page loads but gets no session, likely because of cookie rules for embedded pages. Gemini and Muse never reported data either.
+- Minimized windows flicker.
+- A non-headless Chrome can't hide its Dock icon on macOS.
+- The user wants everything invisible and no 300 MB process running all the time.
+
+**Decision.** The local service starts the user's installed Google Chrome **headless**, using a dedicated profile (`~/.tokentracking/browser-profile`):
+- **When:** every `TOKENTRACKING_INTERVAL_MIN` (default 15) minutes and on demand (`POST /api/refresh`, `npm run refresh`).
+- **What it reads:** each provider *from inside its own site*. Claude and Cursor (including Grok Bot) are read through their JSON endpoints called from the page, so they're first-party (no Origin problems). Gemini and Muse are read from the rendered page with the shared `extension/lib/scrape-dom.js`, including Muse's `openSteps`.
+- **Afterwards:** it quits Chrome.
+- **Logins:** done once in that profile with `npm run browser-login`, which opens a normal, visible Chrome window. Logged-out states are detected and shown on the dashboard.
+- **Control channel:** Chrome DevTools Protocol over `--remote-debugging-pipe`. That means no TCP port and no dependencies.
+
+**Identity.** The user asked that the headless browser not identify itself as headless, so it presents as the user's normal Chrome:
+- the real User-Agent with "HeadlessChrome" replaced
+- matching Client Hints (`Sec-CH-UA*`, `navigator.userAgentData`, platform version)
+- `navigator.webdriver === false` (`--disable-blink-features=AutomationControlled`)
+- real `Accept-Language`
+- a laptop-sized screen
+
+It doesn't attempt deeper fingerprint spoofing.
+
+**Consequences.**
+- Fully invisible, and nothing runs between refreshes (roughly 20–30 s of Chrome per run).
+- Works with the user's normal Chrome closed.
+- Costs a second set of logins that occasionally expire.
+- Sites can still detect automation in other ways. If one starts blocking, that provider can be handed back to the extension with `TOKENTRACKING_HEADLESS_SKIP=<id>`.
+- The extension becomes optional. Its hidden-refresh mode (ADR-008) is superseded if headless proves itself.

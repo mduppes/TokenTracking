@@ -79,8 +79,22 @@ function drawSpark(svg, m) {
   svg.onpointerleave = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
 }
 
+const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse' };
+
+function renderNotices() {
+  const h = data.headless;
+  $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
+  if (!h) { $('#notices').innerHTML = ''; return; }
+  const bad = Object.entries(h.results || {}).filter(([, r]) => r.status !== 'ok');
+  $('#notices').innerHTML = bad.map(([id, r]) => {
+    const what = r.status === 'login' ? 'needs a login. Run <code>npm run browser-login</code>' : esc(r.message || r.status);
+    return `<div class="notice"><span class="dot s-${r.status === 'login' ? 'limited' : 'over-pace'}"></span><span><strong>${esc(PROVIDER_LABEL[id] || id)}</strong> ${what} <span class="muted">(last refresh ${ago(h.at)})</span></span></div>`;
+  }).join('');
+}
+
 function render() {
   if (!data) return;
+  renderNotices();
   $('#updated').textContent = `Updated ${when(data.generatedAt)} · refreshes every minute`;
   $('#viewToggle').textContent = tableView ? 'Card view' : 'Table view';
   $('#grid').hidden = tableView;
@@ -116,6 +130,13 @@ async function load() {
   }
 }
 
+$('#refreshBtn').onclick = async () => {
+  const b = $('#refreshBtn');
+  b.disabled = true; b.textContent = 'Refreshing…';
+  try { await fetch('/api/refresh', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); } catch {}
+  b.disabled = false; b.textContent = 'Refresh now';
+  load();
+};
 $('#viewToggle').onclick = () => { tableView = !tableView; render(); };
 addEventListener('resize', () => render());
 load();

@@ -3,6 +3,14 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **Headless refresh** (ADR-009): the local service starts Chrome headless with a dedicated profile only while refreshing (every 15 min, or via **Refresh now** / `npm run refresh`), reads Claude, Cursor + Grok Bot, Gemini and Muse from inside their own sites, then quits Chrome.
+  - Zero-dependency CDP client over `--remote-debugging-pipe`.
+  - Presents as normal Chrome: User-Agent, Client Hints, `navigator.webdriver`, languages, screen.
+  - Logged-out detection per service.
+- `npm run browser-login`, `npm run refresh`; dashboard **Refresh now** button and "needs a login" notices; `POST /api/refresh`; `headless` field in `/api/status`.
+- `extension/lib/scrape-dom.js`: the page reader shared by the extension and headless refresh; `normalizeDomMeters()` in `parse.js`.
+- Real-Chrome tests (`test/headless.test.js`) with Gemini- and Muse-shaped fixtures.
 ### Fixed
 - Grok Bot direct fetch returned HTTP 403: Cursor rejects `Origin: chrome-extension://…`. A session DNR rule now sets `Origin`/`Referer` to cursor.com on the extension's own request to `get-sand-usage-status` only (`FIRST_PARTY_HEADER_RULES`, scoped to requests outside any tab).
 - Hidden refresh doesn't work for Cursor: the framed spending page loads but makes no usage calls (likely no session cookie in an embedded page).

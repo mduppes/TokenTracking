@@ -26,6 +26,17 @@ It's **local-first**. A Chrome extension reads the usage pages you can already s
   - A minimized-window mode is available in Options.
 - **Debug capture** to save raw responses when a provider changes its page, so parsers are easy to fix.
 
+## How data is collected
+
+| Service | Headless refresh (default) | Extension (optional) |
+|---|---|---|
+| Claude | ✅ JSON from claude.ai | ✅ direct |
+| Cursor + Grok Bot | ✅ JSON from cursor.com | ✅ direct |
+| Gemini | ✅ reads /usage | while you visit the page |
+| Muse | ✅ opens Settings, reads the bar | while you visit Settings |
+
+**Headless refresh** runs inside the local service. Every 15 minutes it starts Chrome invisibly (no window or Dock icon) using its own profile, reads everything, and quits. Nothing runs in between. It needs a one-time login (`npm run browser-login`). The **extension** is optional: it captures while you browse and can cover a service if headless stops working for it.
+
 ## Quick start
 
 Requirements: Node.js ≥ 22.13 (uses the built-in `node:sqlite`) and Chrome or another Chromium browser.
@@ -35,6 +46,10 @@ npm start
 ```
 
 1. Run `npm start` to start the local service. It has no dependencies, so there's nothing to install.
+2. Run `npm run browser-login` once. A normal Chrome window opens with tabs for Claude, Cursor, Gemini and Muse. Log in to each, then quit that window with Cmd+Q.
+3. Run `npm run refresh` to test. It prints `ok` or `login` per service. After that, the service refreshes by itself every 15 minutes.
+
+Optional: load the Chrome extension.
 2. Load the extension:
    1. Open `chrome://extensions` and turn on **Developer mode**.
    2. Click **Load unpacked** and pick the `extension/` folder.
@@ -68,12 +83,18 @@ TOKENTRACKING_HOME=.tokentracking-demo npm start
 |---|---|
 | `npm start` | Run the local service and dashboard on 127.0.0.1:7878 |
 | `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
+| `npm run browser-login` | Open the headless profile in a normal window to log in (`-- gemini` for one service) |
+| `npm run refresh` | Run one headless refresh now and print results (`-- claude muse` for some) |
 | `npm run demo` | Write fake data to `.tokentracking-demo/` |
 | `npm test` | Run the test suite (`node:test`) |
 
 Environment variables:
 - `TOKENTRACKING_HOME`: data directory (default `~/.tokentracking`)
 - `TOKENTRACKING_PORT`: port (default `7878`; if you change it, update `manifest.json` host permissions and the Options service URL)
+- `TOKENTRACKING_HEADLESS=0`: turn headless refresh off
+- `TOKENTRACKING_INTERVAL_MIN`: headless refresh interval (default 15, minimum 5)
+- `TOKENTRACKING_HEADLESS_SKIP`: comma-separated services to leave to the extension (e.g. `claude`)
+- `TOKENTRACKING_CHROME`: Chrome binary path (default `/Applications/Google Chrome.app/…`)
 - `TOKENTRACKING_EXTENSION_IDS`: comma-separated extension ids allowed to call the service (default: any `chrome-extension://` origin)
 
 ## Documentation

@@ -3,6 +3,7 @@ import { readFile, mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildStatus } from './status.js';
+import { lastHeadlessRun } from './headless/refresh.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_BODY = 512 * 1024;
@@ -10,7 +11,7 @@ const MAX_DEBUG_FILES = 50;
 const WINDOWS = new Set(['session', 'daily', 'weekly', 'monthly', 'other']);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
-export function createApp({ db, config }) {
+export function createApp({ db, config, refresh = null }) {
   const allowedHosts = new Set([`127.0.0.1:${config.port}`, `localhost:${config.port}`]);
   const selfOrigins = new Set([...allowedHosts].map((h) => `http://${h}`));
 
@@ -47,7 +48,15 @@ export function createApp({ db, config }) {
         return send(204, '', { 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type' });
       }
       if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true });
-      if (req.method === 'GET' && url.pathname === '/api/status') return send(200, buildStatus(db));
+      if (req.method === 'GET' && url.pathname === '/api/status') {
+        return send(200, { ...buildStatus(db), headless: config.headless?.enabled ? (await lastHeadlessRun(config)) || {} : null });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/refresh') {
+        if (!refresh) return send(404, 'headless refresh disabled');
+        await readJson(req); // enforces JSON content-type (forces CORS preflight for cross-site callers)
+        const run = await refresh();
+        return send(200, run || { error: 'refresh failed' });
+      }
       if (req.method === 'POST' && url.pathname === '/api/ingest') {
         const body = await readJson(req);
         const snaps = Array.isArray(body?.snapshots) ? body.snapshots : body ? [body] : [];

@@ -50,6 +50,7 @@
         "https://www.muse.ai/*"
       ],
       "js": [
+        "lib/scrape-dom.js",
         "content/collector.js"
       ],
       "run_at": "document_idle",

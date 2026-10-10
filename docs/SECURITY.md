@@ -43,6 +43,15 @@ File permissions: the data dir is created `0700` and the DB and debug files `060
 - **Static files** are served only from `server/public/`, with path traversal blocked. The dashboard has a CSP of `default-src 'self'` and loads nothing from CDNs.
 - **Residual risk.** Other software running as your user can read `~/.tokentracking` or call the service. That's the same trust boundary as the rest of your home directory.
 
+## Headless refresher
+
+- **Separate profile:** a dedicated Chrome profile at `~/.tokentracking/browser-profile` (dir `0700`) holds the logins you make with `npm run browser-login`. It's a normal Chrome profile on disk: protect it like your browser profile. To wipe it, delete the folder.
+- **No network port:** Chrome is controlled over a **pipe** (`--remote-debugging-pipe`), not a debugging port, so no other process or website can attach to it.
+- **Short-lived:** Chrome runs only during a refresh (about 20–30 s) and is then told to quit (and killed if it lingers).
+- **Read-only:** pages are only read. The one click sequence (Muse) opens Settings.
+- **Identity:** the browser presents as your normal Chrome (User-Agent, Client Hints, `navigator.webdriver`), at your request, to avoid bot checks on a personal, low-frequency read of your own accounts. Keep the interval at 15 minutes or more.
+- **Dashboard trigger:** `POST /api/refresh` sits behind the same Host/Origin gate as everything else, so web pages can't trigger it.
+
 ## Terms of service
 
 These are unofficial, undocumented endpoints and pages. Reading your own usage with your own session for personal use is low risk. Polling aggressively, or redistributing this as a product, is a different matter. Keep the refresh interval at 15 minutes or more (the minimum allowed is 5).

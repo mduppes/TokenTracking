@@ -4,11 +4,15 @@
   "private": true,
   "description": "Local-first tracker for AI subscription usage limits (Claude, Cursor, Gemini, Grok, Muse) with pacing.",
   "type": "module",
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/src/index.js",
     "status": "node --disable-warning=ExperimentalWarning server/src/cli.js",
     "demo": "node --disable-warning=ExperimentalWarning scripts/seed-demo.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
+    "browser-login": "node --disable-warning=ExperimentalWarning scripts/browser-login.js",
+    "refresh": "node --disable-warning=ExperimentalWarning scripts/refresh-once.js"
   }
 }

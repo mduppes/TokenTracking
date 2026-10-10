@@ -143,6 +143,18 @@ export function extractMeters(json, { labels = {}, maxDepth = 6 } = {}) {
   return dedupeById(out);
 }
 
+/** Turn raw meters from lib/scrape-dom.js ({label, percent, resetText}) into normalized meters. */
+export function normalizeDomMeters(raw, now = new Date()) {
+  return dedupeById((raw || []).map((m) => makeMeter({
+    id: m.label,
+    label: m.label,
+    window: classifyWindow(`${m.label} ${m.resetText || ''}`),
+    usedPercent: m.percent,
+    resetsAt: parseResetText(m.resetText, now),
+    resetText: m.resetText,
+  })));
+}
+
 export function dedupeById(meters) {
   const seen = new Map();
   for (const m of meters) if (!seen.has(m.id)) seen.set(m.id, m);

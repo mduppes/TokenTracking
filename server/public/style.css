@@ -57,6 +57,10 @@ svg.spark circle { fill: var(--series-1); stroke: var(--surface-1); stroke-width
 
 #tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); z-index: 10; }
 
+#notices { display: grid; gap: 8px; margin-bottom: 16px; }
+.notice { display: flex; align-items: center; gap: 8px; background: var(--surface-1); border: 1px solid var(--line); border-left: 3px solid var(--serious); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--text-secondary); }
+.notice code { background: var(--track); padding: 1px 5px; border-radius: 4px; }
+
 .empty { background: var(--surface-1); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; color: var(--text-secondary); }
 .empty code { background: var(--track); padding: 1px 5px; border-radius: 4px; }
 
@@ -64,3 +68,4 @@ table { width: 100%; border-collapse: collapse; background: var(--surface-1); bo
 th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 th { color: var(--text-secondary); font-weight: 500; border-top: none; }
 #table { overflow-x: auto; }
+.controls { display: flex; gap: 8px; }

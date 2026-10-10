@@ -1,7 +1,7 @@
 // MV3 service worker: receives captures, normalizes them, keeps a local cache,
 // forwards snapshots to the local service, and runs periodic background refreshes.
 import { PROVIDERS, providerById, providerForUrl, FIRST_PARTY_HEADER_RULES } from './lib/providers.js';
-import { makeMeter, parseResetText, classifyWindow, dedupeById } from './lib/parse.js';
+import { normalizeDomMeters } from './lib/parse.js';
 
 export const DEFAULTS = {
   serverUrl: 'http://127.0.0.1:7878',
@@ -109,14 +109,7 @@ async function onCapture(msg, sender) {
     meters = p.parseJson(msg.url, msg.data);
     source = `json:${path.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ':id')}`;
   } else if (msg.kind === 'dom') {
-    meters = dedupeById((msg.meters || []).map((m) => makeMeter({
-      id: m.label,
-      label: m.label,
-      window: classifyWindow(`${m.label} ${m.resetText || ''}`),
-      usedPercent: m.percent,
-      resetsAt: parseResetText(m.resetText),
-      resetText: m.resetText,
-    })));
+    meters = normalizeDomMeters(msg.meters);
     source = 'dom';
   }
   if (!meters.length) return null;

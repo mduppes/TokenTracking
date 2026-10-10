@@ -63,6 +63,23 @@ Results are saved to `storage.local.lastRefresh` after each provider (`done: tru
 | `src/cli.js` | `npm run status` terminal view |
 | `public/` | Dashboard (vanilla JS, no CDN, strict CSP) |
 
+### Headless refresher (`server/src/headless/`)
+
+| File | Role |
+|---|---|
+| `chrome.js` | Launches Google Chrome (`--headless=new`, dedicated `--user-data-dir`) and speaks CDP over `--remote-debugging-pipe` (fd 3/4, NUL-delimited JSON). `browserIdentity()` builds the User-Agent/Client-Hints override, and `openPage()` applies it plus a small pre-page script (webdriver, screen). `profileInUse()` reads Chrome's `SingletonLock`. |
+| `refresh.js` | `TASKS` (one per provider: URL, `loggedOut(href, text)`, `read(page)`), `runHeadlessRefresh()` (single-flight), and the last-run status in `~/.tokentracking/headless-status.json` |
+
+Flow per run:
+1. Skip if there's no profile yet, or if the `browser-login` window is open (the profile is locked).
+2. Launch Chrome and build the identity.
+3. For each task, open a page, navigate, wait 2.5 s, then check for a logged-out state.
+4. Run `read()`. API tasks use `fetch` in the page; DOM tasks inject `scrape-dom.js`, run `openSteps`, and poll `scrape()` for up to 25 s.
+5. Store the snapshots and close the page.
+6. Quit Chrome (SIGKILL after 5 s if it lingers).
+
+Scheduling lives in `index.js` (first run 10 s after start, then every N minutes). The dashboard's **Refresh now** calls `POST /api/refresh`. `GET /api/status` includes `headless` (the last run), and the dashboard shows a notice for each provider that isn't `ok`.
+
 ## Data model
 
 **Wire format** (`POST /api/ingest`, body `{ snapshots: Snapshot[] }` or a single `Snapshot`):

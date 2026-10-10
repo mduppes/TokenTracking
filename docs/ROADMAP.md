@@ -2,7 +2,11 @@
 
 Ordered by priority. Move items to CHANGELOG.md when they ship.
 
-## Next: make v0.1 real
+## Next
+- [ ] **Headless refresh:** log in (`npm run browser-login`), verify all four services end to end, watch for bot blocks over a few days. Then decide whether to remove the extension (or keep it as a fallback) and remove ADR-008's hidden mode.
+- [ ] **macOS menu bar app** (option C): Swift `MenuBarExtra` hosting a compact dashboard view, with the at-risk % in the title, plus a LaunchAgent so the service starts at login.
+
+## Earlier items
 - [ ] **Verify every provider against the live site** (see the verification loop in PROVIDERS.md). Confirm end-to-end capture for Claude, Cursor, Gemini and Muse. Add a DOM-fixture test harness for `collector.js` (e.g. a tiny JSDOM-free HTML parser, or run it in the browser).
 - [ ] **Meter id reconciliation.** When JSON and DOM both report the same meter under different ids, map them to one id (per-provider alias table, or prefer JSON and drop DOM meters once JSON has been seen in the last 24 h).
 - [ ] **Claude multi-org picker.** Choose which org(s) to track in Options.
