@@ -5,6 +5,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 ## [Unreleased]
 ### Added
 - **macOS menu bar app** (`menubar/`, `npm run build:menubar`): the most at-risk meter in the menu bar, plus a compact dashboard panel with Refresh now / Open dashboard / Quit. No Dock icon.
+- Menu bar app uses `NSStatusItem` + popover. If the menu bar is full (the icon can't be shown), it falls back to a Dock icon and a panel window.
 - The menu bar app starts the local service itself (and restarts or stops it), so it's the only thing to run. Logs: `~/.tokentracking/service.log`.
 - Dashboard compact mode (`/?compact`). Login notices are merged into one line.
 ### Fixed

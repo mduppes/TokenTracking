@@ -3,6 +3,7 @@
 // with `npm run build:menubar` (swiftc, no Xcode project). See docs/ARCHITECTURE.md.
 import SwiftUI
 import WebKit
+import Combine
 
 let baseURL = URL(string: ProcessInfo.processInfo.environment["TOKENTRACKING_URL"] ?? "http://127.0.0.1:7878")!
 
@@ -46,27 +47,101 @@ final class ServiceRunner {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationWillTerminate(_ notification: Notification) {
-        MainActor.assumeIsolated { ServiceRunner.shared.stop() }
-    }
-}
-
+// AppKit status item + popover (rather than SwiftUI MenuBarExtra, whose icon+text label can render
+// empty on some macOS versions). The panel content is still SwiftUI.
 @main
-struct TokenTrackingMenuApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var model = StatusModel()
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: NSStatusItem!
+    private let popover = NSPopover()
+    private var model: StatusModel!
+    private var observer: AnyCancellable?
 
-    var body: some Scene {
-        MenuBarExtra {
-            PanelView(model: model)
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: model.symbol)
-                Text(model.title)
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory) // menu bar only, no Dock icon
+        app.run()
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            model = StatusModel()
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            statusItem.autosaveName = "TokenTracking"
+            statusItem.isVisible = true
+            if let button = statusItem.button {
+                button.imagePosition = .imageLeading
+                button.action = #selector(togglePopover(_:))
+                button.target = self
+            }
+            popover.behavior = .transient
+            popover.contentSize = NSSize(width: 400, height: 560)
+            popover.contentViewController = NSHostingController(rootView: PanelView(model: model))
+            updateButton()
+            observer = model.objectWillChange.sink { [weak self] _ in
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.updateButton() } }
+            }
+            // If the menu bar is full (common with a notch), macOS silently doesn't show new items.
+            // Fall back to a Dock icon that opens the same panel in a small window.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated { self.checkVisible() } }
+        }
+    }
+
+    private var fallbackWindow: NSWindow?
+
+    @MainActor private func checkVisible() {
+        let visible = statusItem.button?.window?.occlusionState.contains(.visible) ?? false
+        guard !visible else { return }
+        NSLog("TokenTracking: menu bar item not visible (menu bar full?); showing Dock icon + window")
+        NSApp.setActivationPolicy(.regular)
+        showWindow()
+    }
+
+    @MainActor private func showWindow() {
+        if fallbackWindow == nil {
+            let w = NSWindow(contentViewController: NSHostingController(rootView: PanelView(model: model)))
+            w.title = "TokenTracking"
+            w.styleMask = [.titled, .closable, .miniaturizable]
+            w.isReleasedWhenClosed = false
+            w.setContentSize(NSSize(width: 400, height: 560))
+            w.center()
+            fallbackWindow = w
+        }
+        fallbackWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        model.panelOpened()
+    }
+
+    // Clicking the Dock icon (fallback mode) reopens the window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainActor.assumeIsolated { showWindow() }
+        return true
+    }
+
+    @MainActor private func updateButton() {
+        guard let button = statusItem?.button else { return }
+        let image = NSImage(systemSymbolName: model.symbol, accessibilityDescription: "TokenTracking usage")
+        image?.isTemplate = true
+        button.image = image
+        button.title = " " + model.title
+    }
+
+    @objc private func togglePopover(_ sender: NSStatusBarButton) {
+        MainActor.assumeIsolated {
+            if popover.isShown {
+                popover.performClose(sender)
+            } else {
+                popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+                popover.contentViewController?.view.window?.makeKey()
+                NSApp.activate(ignoringOtherApps: true)
+                model.panelOpened()
             }
         }
-        .menuBarExtraStyle(.window)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { ServiceRunner.shared.stop() }
     }
 }
 
@@ -141,6 +216,11 @@ final class StatusModel: ObservableObject {
         }
     }
 
+    func panelOpened() {
+        poll()
+        if reachable { webView.reload() }
+    }
+
     func refreshNow() async {
         refreshing = true
         var req = URLRequest(url: baseURL.appendingPathComponent("api/refresh"))
@@ -193,9 +273,6 @@ struct PanelView: View {
             .padding(10)
         }
         .frame(width: 400, height: 560)
-        .onAppear {
-            model.poll()
-            if model.reachable { model.webView.reload() }
-        }
+        
     }
 }

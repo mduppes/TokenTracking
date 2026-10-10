@@ -81,9 +81,11 @@ This adds an icon at the top right showing your **most at-risk meter**: the wors
 
 **The app is the only thing you need to run.** It starts the local service in the background if it isn't already running, restarts it if it dies, and stops it when you quit. Service logs go to `~/.tokentracking/service.log`. To start everything at login, add `build/TokenTracking.app` under **System Settings → General → Login Items**. The paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
 
-**Can't see the icon?**
-- On a MacBook, icons that don't fit beside the notch are hidden. Quit or Cmd-drag other menu bar icons.
-- Check **System Settings → Menu Bar → Allow in the Menu Bar**.
+**Can't see the icon?** When the menu bar is full (common on a MacBook with a notch), macOS silently doesn't show new icons. TokenTracking detects this and falls back to a **Dock icon** that opens the same panel in a small window. To get the menu bar icon back, make room:
+- turn off a few items in **System Settings → Menu Bar**, or
+- Cmd-drag other icons out of the menu bar,
+
+then relaunch the app.
 
 ### Try it with demo data
 
