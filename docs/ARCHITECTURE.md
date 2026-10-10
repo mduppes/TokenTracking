@@ -80,6 +80,14 @@ Flow per run:
 
 Scheduling lives in `index.js` (first run 10 s after start, then every N minutes). The dashboard's **Refresh now** calls `POST /api/refresh`. `GET /api/status` includes `headless` (the last run), and the dashboard shows a notice for each provider that isn't `ok`.
 
+### Menu bar app (`menubar/TokenTrackingMenu.swift`)
+
+A SwiftUI `MenuBarExtra` (window style) built with plain `swiftc` by `scripts/build-menubar.sh`. There's no Xcode project; the app is ad-hoc signed, with `LSUIElement` (no Dock icon) and `NSAllowsLocalNetworking`.
+- **Title:** polls `GET /api/status` every 60 s and shows the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %) with a gauge symbol.
+- **Panel:** a `WKWebView` of `/?compact` (the dashboard's single-column mode), with Refresh now (`POST /api/refresh`), Open dashboard and Quit.
+- **Service down:** if the service is unreachable, the panel says so.
+- **Config:** `TOKENTRACKING_URL` overrides the service URL.
+
 ## Data model
 
 **Wire format** (`POST /api/ingest`, body `{ snapshots: Snapshot[] }` or a single `Snapshot`):

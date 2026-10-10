@@ -6,6 +6,9 @@ const PACE_LABEL = { ok: 'On pace', ahead: 'Ahead of pace', 'over-pace': 'Will r
 const STATUS_COLOR = { ok: 'var(--good)', ahead: 'var(--warning)', 'over-pace': 'var(--serious)', limited: 'var(--critical)', unknown: 'var(--text-muted)' };
 
 let tableView = false;
+// ?compact: the menu bar panel's view (single column, no header controls).
+const compact = new URLSearchParams(location.search).has('compact');
+if (compact) document.documentElement.classList.add('compact');
 let data = null;
 
 function dur(ms) {
@@ -55,8 +58,10 @@ function meterHtml(m, pi, mi) {
 }
 
 function drawSpark(svg, m) {
-  const w = svg.clientWidth || 300, h = 36;
+  // Match the viewBox to the rendered size (compact mode is shorter) so the line spans the full width.
+  const w = svg.clientWidth || 300, h = svg.clientHeight || 36;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
   const pts = m.history.filter(([, v]) => v != null).map(([t, v]) => [Date.parse(t), v]);
   if (pts.length < 2) return;
   const t0 = pts[0][0], t1 = pts.at(-1)[0] || t0 + 1;
@@ -85,11 +90,18 @@ function renderNotices() {
   const h = data.headless;
   $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
   if (!h) { $('#notices').innerHTML = ''; return; }
-  const bad = Object.entries(h.results || {}).filter(([, r]) => r.status !== 'ok');
-  $('#notices').innerHTML = bad.map(([id, r]) => {
-    const what = r.status === 'login' ? 'needs a login. Run <code>npm run browser-login</code>' : esc(r.message || r.status);
-    return `<div class="notice"><span class="dot s-${r.status === 'login' ? 'limited' : 'over-pace'}"></span><span><strong>${esc(PROVIDER_LABEL[id] || id)}</strong> ${what} <span class="muted">(last refresh ${ago(h.at)})</span></span></div>`;
-  }).join('');
+  const entries = Object.entries(h.results || {});
+  const names = (list) => {
+    const n = list.map(([id]) => `<strong>${esc(PROVIDER_LABEL[id] || id)}</strong>`);
+    return n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n[0];
+  };
+  const login = entries.filter(([, r]) => r.status === 'login');
+  const other = entries.filter(([, r]) => r.status !== 'ok' && r.status !== 'login');
+  const when = `<span class="muted">(last refresh ${ago(h.at)})</span>`;
+  $('#notices').innerHTML = [
+    login.length ? `<div class="notice"><span class="dot s-limited"></span><span>${names(login)} ${login.length > 1 ? 'need' : 'needs'} a login. Run <code>npm run browser-login</code> ${when}</span></div>` : '',
+    ...other.map(([id, r]) => `<div class="notice"><span class="dot s-over-pace"></span><span>${names([[id]])}: ${esc(r.message || r.status)} ${when}</span></div>`),
+  ].join('');
 }
 
 function render() {

@@ -5,3 +5,4 @@ node_modules/
 *.db-shm
 .tokentracking-demo/
 .claude/settings.local.json
+build/

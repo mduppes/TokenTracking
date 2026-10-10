@@ -4,6 +4,11 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- **macOS menu bar app** (`menubar/`, `npm run build:menubar`): the most at-risk meter in the menu bar, plus a compact dashboard panel with Refresh now / Open dashboard / Quit. No Dock icon.
+- Dashboard compact mode (`/?compact`). Login notices are merged into one line.
+### Fixed
+- Sparklines didn't span the full width when the chart was shorter than 36 px.
+- The demo server (`.claude/launch.json`) no longer runs headless refresh.
 - **Headless refresh** (ADR-009): the local service starts Chrome headless with a dedicated profile only while refreshing (every 15 min, or via **Refresh now** / `npm run refresh`), reads Claude, Cursor + Grok Bot, Gemini and Muse from inside their own sites, then quits Chrome.
   - Zero-dependency CDP client over `--remote-debugging-pipe`.
   - Presents as normal Chrome: User-Agent, Client Hints, `navigator.webdriver`, languages, screen.

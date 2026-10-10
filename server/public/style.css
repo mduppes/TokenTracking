@@ -69,3 +69,16 @@ th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line);
 th { color: var(--text-secondary); font-weight: 500; border-top: none; }
 #table { overflow-x: auto; }
 .controls { display: flex; gap: 8px; }
+
+/* Compact view for the menu bar panel (/?compact) */
+.compact body { padding: 10px 12px 12px; }
+.compact header { margin-bottom: 8px; }
+.compact h1 { font-size: 15px; }
+.compact .controls { display: none; }
+.compact #grid { grid-template-columns: 1fr; gap: 10px; }
+.compact .card { padding: 12px; border-radius: 10px; }
+.compact .meter { margin-top: 10px; }
+.compact .meter-value { font-size: 17px; }
+.compact .details { font-size: 11px; }
+.compact svg.spark { height: 22px; margin-top: 4px; }
+.compact #notices { margin-bottom: 10px; }

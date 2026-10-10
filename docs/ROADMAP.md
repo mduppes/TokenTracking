@@ -4,7 +4,9 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
 - [ ] **Headless refresh:** log in (`npm run browser-login`), verify all four services end to end, watch for bot blocks over a few days. Then decide whether to remove the extension (or keep it as a fallback) and remove ADR-008's hidden mode.
-- [ ] **macOS menu bar app** (option C): Swift `MenuBarExtra` hosting a compact dashboard view, with the at-risk % in the title, plus a LaunchAgent so the service starts at login.
+- [x] **macOS menu bar app** (option C): Swift `MenuBarExtra` + compact dashboard (2026-10-10).
+- [ ] **Start the service at login:** a LaunchAgent (`~/Library/LaunchAgents`) running `npm start` with KeepAlive. The app could also offer "Start service" when it's down.
+- [ ] Menu bar: optional notifications at 85% / over-pace; choose which meter drives the title.
 
 ## Earlier items
 - [ ] **Verify every provider against the live site** (see the verification loop in PROVIDERS.md). Confirm end-to-end capture for Claude, Cursor, Gemini and Muse. Add a DOM-fixture test harness for `collector.js` (e.g. a tiny JSDOM-free HTML parser, or run it in the browser).

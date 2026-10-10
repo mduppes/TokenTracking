@@ -4,7 +4,14 @@
     {
       "name": "demo-dashboard",
       "runtimeExecutable": "env",
-      "runtimeArgs": ["TOKENTRACKING_HOME=.tokentracking-demo", "TOKENTRACKING_PORT=7879", "node", "--disable-warning=ExperimentalWarning", "server/src/index.js"],
+      "runtimeArgs": [
+        "TOKENTRACKING_HEADLESS=0",
+        "TOKENTRACKING_HOME=.tokentracking-demo",
+        "TOKENTRACKING_PORT=7879",
+        "node",
+        "--disable-warning=ExperimentalWarning",
+        "server/src/index.js"
+      ],
       "port": 7879
     }
   ]

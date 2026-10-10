@@ -25,7 +25,8 @@ extension/            Chrome MV3 extension (load unpacked)
   background.js       service worker: normalize, cache, POST, refresh
 server/src/           Node service (index, server, db, pacing, status, cli)
 server/src/headless/  headless Chrome refresher (chrome.js = CDP over pipe, refresh.js = per-provider TASKS)
-server/public/        dashboard (vanilla JS)
+server/public/        dashboard (vanilla JS; /?compact = menu bar panel view)
+menubar/              macOS menu bar app (SwiftUI MenuBarExtra + WKWebView), built by scripts/build-menubar.sh
 test/                 node:test suites
 scripts/seed-demo.js  fake data for UI work
 docs/                 ARCHITECTURE, PROVIDERS, SECURITY, DECISIONS, ROADMAP
@@ -38,6 +39,7 @@ npm start                                    # service on :7878 (~/.tokentrackin
 npm run status                               # terminal view
 npm run browser-login                        # log in once in the headless profile (visible window)
 npm run refresh                              # one headless refresh now, prints per-service results
+npm run build:menubar && open build/TokenTracking.app   # menu bar app
 npm run demo && TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_PORT=7879 npm start   # UI work with fake data
 ```
 `.claude/launch.json` has a `demo-dashboard` config (port 7879) for preview tools.

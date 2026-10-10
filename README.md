@@ -67,6 +67,18 @@ npm run status
 
 After changing extension code, click reload on `chrome://extensions`, then reload any open provider tabs.
 
+### Menu bar app (macOS 13+)
+
+```bash
+npm run build:menubar
+```
+
+```bash
+open build/TokenTracking.app
+```
+
+This adds an icon at the top right showing your **most at-risk meter**: the worst pace status first, then the highest %. The gauge icon fills as usage rises. Clicking it opens a compact dashboard with **Refresh now**, **Open dashboard** and **Quit**. It has no Dock icon and reads from the local service, so `npm start` must be running. To launch it at login, add `build/TokenTracking.app` under System Settings → General → Login Items.
+
 ### Try it with demo data
 
 ```bash
@@ -84,6 +96,7 @@ TOKENTRACKING_HOME=.tokentracking-demo npm start
 | `npm start` | Run the local service and dashboard on 127.0.0.1:7878 |
 | `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
 | `npm run browser-login` | Open the headless profile in a normal window to log in (`-- gemini` for one service) |
+| `npm run build:menubar` | Build the macOS menu bar app into `build/TokenTracking.app` |
 | `npm run refresh` | Run one headless refresh now and print results (`-- claude muse` for some) |
 | `npm run demo` | Write fake data to `.tokentracking-demo/` |
 | `npm test` | Run the test suite (`node:test`) |
