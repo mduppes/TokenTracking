@@ -16,7 +16,7 @@ const meters = [
   { provider: 'claude', id: 'seven-day', label: 'Weekly · all models', window: 'weekly', resetIn: 52 * H, end: 78 },
   { provider: 'claude', id: 'seven-day-opus', label: 'Weekly · Opus', window: 'weekly', resetIn: 52 * H, end: 92 },
   { provider: 'cursor', id: 'auto', label: 'Cursor models', window: 'monthly', resetIn: 9 * 24 * H, end: 64 },
-  { provider: 'gemini', id: 'daily', label: 'Pro model daily limit', window: 'daily', resetIn: 7 * H, end: 35 },
+  { provider: 'gemini', id: 'daily', label: 'Pro model daily limit', window: 'daily', resetIn: 7 * H, end: 35, staleBy: 3 * H }, // shows the stale notice
   { provider: 'cursor', id: 'grok-bot', label: 'Grok Bot', window: 'weekly', resetIn: 100 * H, end: 18 },
   { provider: 'muse', id: 'weekly-tokens', label: 'Weekly tokens', window: 'weekly', resetIn: 30 * H, end: 100 },
 ];
@@ -27,7 +27,7 @@ for (const m of meters) {
   const start = now + m.resetIn - WIN_H[m.window] * H;
   const steps = 24;
   for (let i = 0; i <= steps; i++) {
-    const t = start + ((now - start) * i) / steps;
+    const t = start + ((now - (m.staleBy || 0) - start) * i) / steps;
     const pct = Math.min(100, m.end * (i / steps) ** 1.2 + (i ? Math.sin(i) * 1.5 : 0));
     db.addSnapshot(m.provider, { capturedAt: new Date(t).toISOString(), source: 'demo', plan: m.plan || null },
       { id: m.id, label: m.label, window: m.window, usedPercent: Math.max(0, Math.round(pct * 10) / 10), used: null, limit: null, unit: null, resetsAt, resetText: null });

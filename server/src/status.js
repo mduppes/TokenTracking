@@ -2,11 +2,12 @@ import { computePace, WINDOW_HOURS } from './pacing.js';
 
 export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)' };
 const WINDOW_ORDER = { session: 0, daily: 1, weekly: 2, monthly: 3, other: 4 };
-const STALE_AFTER_MS = 60 * 6e4;
+const DEFAULT_STALE_AFTER_MS = 60 * 6e4;
 const HIDE_AFTER_DAYS = 7;
 
 /** Build the dashboard/CLI view: latest reading per meter + pacing + short history. */
-export function buildStatus(db, now = new Date()) {
+/** @param {{staleAfterMs?: number}} opts  a meter is stale when its last reading is older than this */
+export function buildStatus(db, now = new Date(), { staleAfterMs = DEFAULT_STALE_AFTER_MS } = {}) {
   const since = new Date(now.getTime() - HIDE_AFTER_DAYS * 864e5).toISOString();
   const providers = new Map();
   for (const row of db.latest(since)) {
@@ -20,7 +21,7 @@ export function buildStatus(db, now = new Date()) {
       id: row.meter_id, label: row.label, window: row.window,
       usedPercent: row.used_percent, used: row.used, limit: row.limit_value, unit: row.unit,
       resetsAt: row.resets_at, resetText: row.reset_text, source: row.source, capturedAt: row.captured_at,
-      stale: now - Date.parse(row.captured_at) > STALE_AFTER_MS,
+      stale: now - Date.parse(row.captured_at) > staleAfterMs,
       pace: computePace(latest, history, now),
       history: history.slice(-200).map((h) => [h.capturedAt, h.usedPercent]),
     };

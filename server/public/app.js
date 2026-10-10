@@ -75,7 +75,7 @@ function renderUpNext() {
   $('#upnext').innerHTML = `<section class="card upnext"><h2>Resets next</h2><div class="upnext-grid">${rows.map(({ p, m }) => `
     <span class="un-name">${esc(p.name)} · ${esc(m.label)}</span>
     <span class="un-pct s-text-${m.pace.status}">${m.usedPercent == null ? '?' : Math.round(m.usedPercent)}%</span>
-    <span class="un-in">${m.pace.remainingMs <= 0 ? 'reset' : `in ${dur(m.pace.remainingMs)}`}</span>
+    <span class="un-in">${m.pace.remainingMs <= 0 ? 'reset' : `in ${dur(m.pace.remainingMs)}`}${m.stale ? ' <span class="stale-tag" title="Last read ' + ago(m.capturedAt) + '">stale</span>' : ''}</span>
     <span class="un-when">${esc(when(m.resetsAt))}</span>`).join('')}</div></section>`;
 }
 
@@ -118,20 +118,34 @@ function drawSpark(svg, m) {
 const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse' };
 
 function renderNotices() {
-  const h = data.headless;
+  const h = data.headless || {};
   $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
-  if (!h) { $('#notices').innerHTML = ''; return; }
-  const entries = Object.entries(h.results || {});
-  const names = (list) => {
-    const n = list.map(([id]) => `<strong>${esc(PROVIDER_LABEL[id] || id)}</strong>`);
+  const results = h.results || {};
+  const names = (ids) => {
+    const n = ids.map((id) => `<strong>${esc(PROVIDER_LABEL[id] || id)}</strong>`);
     return n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n[0];
   };
-  const login = entries.filter(([, r]) => r.status === 'login');
+  const reason = (r) => (r.status === 'login' ? 'needs a login' : r.message || r.status);
+
+  // 1. Stale services: readings older than ~2 missed refreshes, with the last refresh's reason.
+  const stale = data.providers.filter((p) => p.meters.some((m) => m.stale));
+  const staleIds = new Set(stale.map((p) => p.id));
+  const staleNotes = stale.map((p) => {
+    const oldest = p.meters.filter((m) => m.stale).map((m) => m.capturedAt).sort()[0];
+    const r = results[p.id];
+    const why = r && r.status !== 'ok' ? ` · last refresh: ${esc(reason(r))}` : '';
+    return `<div class="notice"><span class="dot s-unknown"></span><span>${names([p.id])} is stale: last read ${ago(oldest)}${why}</span></div>`;
+  });
+
+  // 2. Refresh problems for services that aren't already listed as stale.
+  const entries = Object.entries(results).filter(([id]) => !staleIds.has(id));
+  const login = entries.filter(([, r]) => r.status === 'login').map(([id]) => id);
   const other = entries.filter(([, r]) => r.status !== 'ok' && r.status !== 'login');
-  const when = `<span class="muted">(last refresh ${ago(h.at)})</span>`;
+  const when = h.at ? ` <span class="muted">(last refresh ${ago(h.at)})</span>` : '';
   $('#notices').innerHTML = [
-    login.length ? `<div class="notice"><span class="dot s-limited"></span><span>${names(login)} ${login.length > 1 ? 'need' : 'needs'} a login. Run <code>npm run browser-login</code> ${when}</span></div>` : '',
-    ...other.map(([id, r]) => `<div class="notice"><span class="dot s-over-pace"></span><span>${names([[id]])}: ${esc(r.message || r.status)} ${when}</span></div>`),
+    ...staleNotes,
+    login.length ? `<div class="notice"><span class="dot s-limited"></span><span>${names(login)} ${login.length > 1 ? 'need' : 'needs'} a login. Run <code>npm run browser-login</code>${when}</span></div>` : '',
+    ...other.map(([id, r]) => `<div class="notice"><span class="dot s-over-pace"></span><span>${names([id])}: ${esc(reason(r))}${when}</span></div>`),
   ].join('');
 }
 

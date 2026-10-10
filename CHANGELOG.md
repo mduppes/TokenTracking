@@ -5,7 +5,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 ## [Unreleased]
 ### Added
 - Dashboard: a **countdown pill** on every meter ("↻ 1d 3h", colored by pace) and a **"Resets next"** list across all services, soonest first. The header shows "Updated 3m ago · next refresh in 12m" (`headless.nextAt` / `intervalMin` in `/api/status`).
-- Menu bar: **one icon + digit per service** (Claude ✳, Cursor ➚, Grok Bot ⚡, Gemini ✦, Muse Ⓜ). The digit is the tens of % used by that service's worst meter (0–9), `–` means at the limit and `?` means no reading. It's drawn as one template image, so it adapts to light and dark menu bars. The tooltip lists every service.
+- Menu bar: **one icon + two digits per service**, in the order Claude ✳, Cursor ➚, Grok Bot ✕, Muse Ⓜ, Gemini ✦. The digits are the % used by that service's worst meter (0–99, padded so the width is stable); `––` means at the limit and `??` means no reading. It's drawn as one template image, so it adapts to light and dark menu bars. The tooltip lists every service and marks stale ones.
+- **Stale data is listed:** a notice per stale service at the top of the dashboard and menu bar panel ("Gemini is stale: last read 3h ago · last refresh: needs a login"), plus a "stale" tag in "Resets next". A reading counts as stale after 2.5× the refresh interval (at least 30 min).
 ### Changed
 - The refresh timer reschedules after each run (`setTimeout` chain), so the next-refresh time is exact.
 

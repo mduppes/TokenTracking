@@ -23,11 +23,11 @@ No API keys, no accounts, no cloud, no browser extension.
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
 - **Menu bar app:**
-  - **Title:** one icon and digit per service, e.g. `✳7 ➚7 ⚡8 ✦0 Ⓜ9`. The digit is the tens of % used by that service's worst meter, `–` means at the limit, and hovering shows the exact numbers.
+  - **Title:** one icon and % per service, e.g. `✳74 ➚70 ✕86 Ⓜ97 ✦0`. Each number is that service's worst meter, `––` means at the limit, and hovering shows details.
   - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
   - **Lifecycle:** it starts and stops everything it needs.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
-- **Login notices.** When a service's login expires, the dashboard tells you to run `npm run browser-login`.
+- **Stale and login notices.** Services whose data is stale (missed about 2 refreshes) are listed at the top with the reason, and an expired login tells you to run `npm run browser-login`.
 
 ## Quick start
 
@@ -53,8 +53,8 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 ### The menu bar app
 
 - **What it shows:** one icon per service, each with a digit for that service's worst meter:
-  - **Icons:** ✳ Claude, ➚ Cursor, ⚡ Grok Bot, ✦ Gemini, Ⓜ Muse.
-  - **The digit** is the tens of % used: `7` = 70–79%, `9` = 90–99%, `–` = at the limit, `?` = no reading yet.
+  - **Icons:** ✳ Claude, ➚ Cursor, ✕ Grok Bot, Ⓜ Muse, ✦ Gemini.
+  - **The number** is the % used (0–99), `––` = at the limit, `??` = no reading yet.
   - **Hover** for exact numbers and the most at-risk meter. Click for the compact dashboard.
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.
 - **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.

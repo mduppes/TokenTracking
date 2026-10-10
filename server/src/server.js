@@ -40,7 +40,9 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
     try {
       if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true });
       if (req.method === 'GET' && url.pathname === '/api/status') {
-        return send(200, { ...buildStatus(db), headless: config.headless?.enabled ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin } : null });
+        // Stale = missed ~2 scheduled refreshes (at least 30 min).
+        const staleAfterMs = Math.max(30, (config.headless?.intervalMin || 15) * 2.5) * 6e4;
+        return send(200, { ...buildStatus(db, new Date(), { staleAfterMs }), headless: config.headless?.enabled ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin } : null });
       }
       if (req.method === 'POST' && url.pathname === '/api/refresh') {
         if (!refresh) return send(404, 'headless refresh disabled');

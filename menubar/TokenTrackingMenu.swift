@@ -162,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// One service in the menu bar: an SF Symbol and a single character for its worst meter.
 struct MenuSlot: Equatable {
     let symbol: String
-    let text: String   // "0"…"9" = tens of % used, "–" = at the limit, "?" = no reading
+    let text: String   // "0"…"99" = % used, "––" = at the limit, "??" = no reading
 }
 
 enum MenuBarGlyphs {
@@ -170,14 +170,17 @@ enum MenuBarGlyphs {
     static let services: [(id: String, symbol: String, name: String, matches: (String, String) -> Bool)] = [
         ("claude", "asterisk", "Claude", { p, _ in p == "claude" }),
         ("cursor", "cursorarrow", "Cursor", { p, m in p == "cursor" && m != "grok-bot" }),
-        ("grok-bot", "bolt", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
-        ("gemini", "sparkle", "Gemini", { p, _ in p == "gemini" }),
+        ("grok-bot", "xmark", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
         ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
+        ("gemini", "sparkle", "Gemini", { p, _ in p == "gemini" }),
     ]
 
-    /// 0–9 = tens of % used (95% → "9"), "–" at/over the limit.
-    static func digit(_ pct: Double) -> String {
-        pct >= 100 ? "–" : String(min(9, max(0, Int(pct / 10))))
+    /// Two characters: % used 0–99 (single digits padded with a trailing figure space so the width is
+    /// stable), "––" at/over the limit.
+    static func digits(_ pct: Double) -> String {
+        if pct >= 100 { return "––" }
+        let n = min(99, max(0, Int(pct)))
+        return n < 10 ? "\(n)\u{2007}" : String(n) // pad after, so the digit stays next to its icon
     }
 
     /// Draw icons and digits in black on a transparent image and mark it as a template, so macOS
@@ -215,7 +218,7 @@ enum MenuBarGlyphs {
 
 struct Status: Decodable {
     struct Provider: Decodable { let id: String; let name: String; let meters: [Meter] }
-    struct Meter: Decodable { let id: String; let label: String; let usedPercent: Double?; let pace: Pace }
+    struct Meter: Decodable { let id: String; let label: String; let usedPercent: Double?; let pace: Pace; let stale: Bool }
     struct Pace: Decodable { let status: String }
     let providers: [Provider]
 }
@@ -273,10 +276,11 @@ final class StatusModel: ObservableObject {
             guard !ms.isEmpty else { return nil }
             guard let worst = ms.compactMap({ m in m.usedPercent.map { (m, $0) } }).max(by: { $0.1 < $1.1 }) else {
                 lines.append("\(svc.name): no reading")
-                return MenuSlot(symbol: svc.symbol, text: "?")
+                return MenuSlot(symbol: svc.symbol, text: "??")
             }
-            lines.append("\(svc.name): \(Int(worst.1.rounded()))% (\(worst.0.label))")
-            return MenuSlot(symbol: svc.symbol, text: MenuBarGlyphs.digit(worst.1))
+            let stale = ms.contains { $0.stale } ? " · stale" : ""
+            lines.append("\(svc.name): \(Int(worst.1.rounded()))% (\(worst.0.label))\(stale)")
+            return MenuSlot(symbol: svc.symbol, text: MenuBarGlyphs.digits(worst.1))
         }
         let rank = ["limited": 4, "over-pace": 3, "ahead": 2, "ok": 1]
         let meters = s.providers.flatMap { p in p.meters.map { (p.name, $0) } }.filter { $0.1.usedPercent != nil }
