@@ -127,6 +127,10 @@ None of the usage pages or endpoints this reads are official APIs, so they can c
 
 This is meant for personal use, reading your own usage with your own logged-in session. Keep the refresh interval reasonable (15 minutes by default).
 
+## License
+
+[MIT](LICENSE)
+
 ## Disclaimer
 
 TokenTracking is an independent personal project. It is not affiliated with, endorsed by, or supported by Anthropic, Anysphere (Cursor), xAI, Google, or Meta. Product names are trademarks of their respective owners. It relies on undocumented web pages and endpoints that may change or break at any time, and using it may be subject to each service's terms. Use at your own risk.

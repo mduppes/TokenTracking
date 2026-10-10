@@ -4,6 +4,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- MIT license.
 - README screenshots (`docs/images/`), generated from demo data by `npm run screenshots` (dashboard light/dark, menu bar panel, menu bar glyphs).
 - README: clone step and a disclaimer (not affiliated with the providers; relies on undocumented endpoints).
 ### Changed

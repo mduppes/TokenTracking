@@ -16,5 +16,6 @@
     "refresh": "node --disable-warning=ExperimentalWarning scripts/refresh-once.js",
     "build:menubar": "sh scripts/build-menubar.sh",
     "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.js"
-  }
+  },
+  "license": "MIT"
 }
