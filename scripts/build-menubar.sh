@@ -14,7 +14,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>TokenTracking</string>
-  <key>CFBundleIdentifier</key><string>local.tokentracking.menubar</string>
+  <key>CFBundleIdentifier</key><string>io.github.mduppes.tokentracking</string>
   <key>CFBundleExecutable</key><string>TokenTracking</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
@@ -40,7 +40,17 @@ SWIFT
 
 swiftc -O -parse-as-library -target "$(uname -m)-apple-macos13.0" \
   -o "$APP/Contents/MacOS/TokenTracking" menubar/*.swift "$GEN"
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true  # ad-hoc signature for local use
+# Sign with the stable local certificate if present (scripts/create-signing-cert.sh): macOS ties
+# per-app settings such as "Allow in the Menu Bar" to the signing identity, so ad-hoc signatures
+# (new identity every build) make those settings go stale after each rebuild.
+SIGN_ID="TokenTracking Local Signing"
+if security find-identity -v -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
+  codesign --force --sign "$SIGN_ID" "$APP"
+  echo "Signed with \"$SIGN_ID\""
+else
+  codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+  echo "Ad-hoc signed. For a stable identity (keeps menu bar permission across rebuilds): sh scripts/create-signing-cert.sh"
+fi
 touch "$APP"  # nudge Finder to pick up the icon
 echo "Built $APP"
 echo "Run it:  open $APP"

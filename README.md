@@ -60,11 +60,15 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
    ```bash
    npm run refresh
    ```
-3. **Build the menu bar app:**
+3. **Create a local signing certificate** (one time). This gives the app a stable identity, so macOS remembers its menu bar permission across rebuilds. macOS asks for your password once.
+   ```bash
+   sh scripts/create-signing-cert.sh
+   ```
+4. **Build the menu bar app:**
    ```bash
    npm run build:menubar
    ```
-4. **Open it:**
+5. **Open it:**
    ```bash
    open build/TokenTracking.app
    ```
@@ -79,7 +83,7 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 - **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.
 - **Moving things:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
 - **Can't see the icon?** macOS hides menu bar icons in two cases:
-  - **The app isn't allowed yet.** Recent macOS starts new menu bar apps switched off. Turn **TokenTracking** on under **System Settings → Menu Bar → Allow in the Menu Bar**.
+  - **The app isn't allowed.** Turn **TokenTracking** on under **System Settings → Menu Bar → Allow in the Menu Bar**. If it's on but the icon still doesn't show, the entry is probably tied to an older build: without the signing certificate (step 3), every rebuild gets a new identity and the setting goes stale.
   - **The menu bar is full**, common on a MacBook with a notch. Turn off other items or Cmd-drag them out.
 
   While the icon is hidden, TokenTracking shows a **Dock icon** and the same panel in a small window, with a button to that settings page. When the icon appears, it switches back by itself.
