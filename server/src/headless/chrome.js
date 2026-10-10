@@ -180,7 +180,9 @@ export async function openPage(conn, { identity = null } = {}) {
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
       return r.result.value;
     },
-    /** PNG screenshot as a Buffer (debugging). */
+    /** Raw CDP command on this page's session. */
+    send,
+    /** PNG screenshot as a Buffer (debugging, docs). */
     async screenshot() { return Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'); },
     close: () => conn.send('Target.closeTarget', { targetId }).catch(() => {}),
   };

@@ -58,7 +58,6 @@ function meterHtml(m, pi, mi) {
     </div>
     <div class="meter-sub">
       <span class="status"><span class="meter-value">${pct == null ? '?' : Math.round(pct)}<small>% used</small></span><span class="dot s-${p.status}"></span>${PACE_LABEL[p.status]}${p.expectedPercent != null ? ` · even pace ${Math.round(p.expectedPercent)}%` : ''}</span>
-      <span class="reset-at">${m.resetsAt ? esc(when(m.resetsAt)) : esc(m.resetText || '')}</span>
     </div>
     <div class="details">${details.map((d) => `<span>${esc(d)}</span>`).join('')}${m.stale ? `<span class="stale">Last read ${ago(m.capturedAt)}</span>` : ''}</div>
     ${m.history.length >= 2 ? `<svg class="spark" data-p="${pi}" data-m="${mi}" aria-hidden="true"></svg>` : ''}
@@ -117,6 +116,9 @@ function drawSpark(svg, m) {
 
 const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse' };
 
+/** "claude_max" → "Max", "pro" → "Pro" */
+const planLabel = (plan) => String(plan).replace(/^claude_/i, '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
 function renderNotices() {
   const h = data.headless || {};
   $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
@@ -162,7 +164,7 @@ function render() {
     return;
   }
   $('#grid').innerHTML = data.providers.map((p, pi) => `<section class="card">
-      <h2><span>${esc(p.name)}${p.plan ? ` <span class="meta">${esc(p.plan)}</span>` : ''}</span><span class="meta">${ago(p.lastCapturedAt)}</span></h2>
+      <h2><span>${esc(p.name)}${p.plan ? ` <span class="meta">${esc(planLabel(p.plan))}</span>` : ''}</span><span class="meta">${ago(p.lastCapturedAt)}</span></h2>
       ${p.meters.map((m, mi) => meterHtml(m, pi, mi)).join('')}
     </section>`).join('');
   document.querySelectorAll('svg.spark').forEach((svg) => drawSpark(svg, data.providers[svg.dataset.p].meters[svg.dataset.m]));

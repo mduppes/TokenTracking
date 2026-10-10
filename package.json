@@ -14,6 +14,7 @@
     "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
     "browser-login": "node --disable-warning=ExperimentalWarning scripts/browser-login.js",
     "refresh": "node --disable-warning=ExperimentalWarning scripts/refresh-once.js",
-    "build:menubar": "sh scripts/build-menubar.sh"
+    "build:menubar": "sh scripts/build-menubar.sh",
+    "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.js"
   }
 }

@@ -36,6 +36,7 @@ npm run browser-login [-- gemini]            # (user) log in once in the headles
 npm run build:menubar && open build/TokenTracking.app   # menu bar app (starts the service itself)
 npm start                                    # service alone on :7878 (~/.tokentracking)
 npm run status                               # terminal view
+npm run screenshots                          # regenerate docs/images/ (demo data only; never real usage)
 npm run demo && TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_PORT=7879 TOKENTRACKING_HEADLESS=0 npm start
 ```
 `.claude/launch.json` has a `demo-dashboard` config (port 7879, headless off) for preview tools.

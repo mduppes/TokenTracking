@@ -4,7 +4,7 @@ import { rmSync } from 'node:fs';
 import { loadConfig } from '../server/src/config.js';
 import { openDb } from '../server/src/db.js';
 
-const home = '.tokentracking-demo';
+const home = process.env.TOKENTRACKING_DEMO_HOME || '.tokentracking-demo';
 rmSync(home, { recursive: true, force: true });
 const config = loadConfig({ TOKENTRACKING_HOME: home });
 const db = openDb(config.dbPath);

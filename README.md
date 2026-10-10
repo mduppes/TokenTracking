@@ -11,6 +11,18 @@ It's **local-first**:
 
 No API keys, no accounts, no cloud, no browser extension.
 
+<p align="center">
+  <img src="docs/images/menubar.png" width="440" alt="Menu bar: one icon and % used per service, in light and dark menu bars">
+</p>
+
+<p align="center">
+  <img src="docs/images/panel-dark.png" width="300" alt="Menu bar panel: stale notice, resets-next list and meters with countdown pills">
+  &nbsp;
+  <img src="docs/images/dashboard-light.png" width="520" alt="Dashboard: resets-next list and per-service cards with usage bars, even-pace markers, countdowns and sparklines">
+</p>
+
+<sub>Screenshots use demo data (`npm run screenshots`).</sub>
+
 ## Features
 
 - **Every limit in one place.** Session (5h), daily, weekly and monthly meters per service, with time until reset.
@@ -33,6 +45,10 @@ No API keys, no accounts, no cloud, no browser extension.
 
 Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Google Chrome, and the Xcode command line tools (for `swiftc`). There are no npm dependencies, so there's nothing to install.
 
+0. **Get the code:**
+   ```bash
+   git clone https://github.com/mduppes/TokenTracking.git && cd TokenTracking
+   ```
 1. **Log in once** in TokenTracking's own Chrome profile. A normal Chrome window opens with tabs for Claude, Cursor, Gemini and Muse. Log in to each, then **quit that window with Cmd+Q**.
    ```bash
    npm run browser-login
@@ -81,6 +97,7 @@ TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_HEADLESS=0 npm start
 | `npm start` | Run the local service and dashboard on 127.0.0.1:7878 without the app |
 | `npm run status` | Print current usage and pacing (`-- --json` for JSON) |
 | `npm run demo` | Write fake data to `.tokentracking-demo/` |
+| `npm run screenshots` | Regenerate `docs/images/` from demo data (headless Chrome + swift) |
 | `npm test` | Run the test suite (`node:test`, including real headless Chrome) |
 
 Environment variables:
@@ -108,4 +125,8 @@ Environment variables:
 
 None of the usage pages or endpoints this reads are official APIs, so they can change without notice. When a meter stops updating, run `npm run refresh -- <service>` and follow the verification loop in [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
-This is meant for personal use, reading your own usage with your own logged-in session.
+This is meant for personal use, reading your own usage with your own logged-in session. Keep the refresh interval reasonable (15 minutes by default).
+
+## Disclaimer
+
+TokenTracking is an independent personal project. It is not affiliated with, endorsed by, or supported by Anthropic, Anysphere (Cursor), xAI, Google, or Meta. Product names are trademarks of their respective owners. It relies on undocumented web pages and endpoints that may change or break at any time, and using it may be subject to each service's terms. Use at your own risk.
