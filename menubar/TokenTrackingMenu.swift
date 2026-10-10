@@ -6,8 +6,55 @@ import WebKit
 
 let baseURL = URL(string: ProcessInfo.processInfo.environment["TOKENTRACKING_URL"] ?? "http://127.0.0.1:7878")!
 
+// MARK: - Local service ownership
+// The app is the only thing the user runs: if the Node service isn't already up, start it as a child
+// process (paths baked in at build time, see BuildConfig.swift) and stop it again on quit.
+@MainActor
+final class ServiceRunner {
+    static let shared = ServiceRunner()
+    private var process: Process?
+
+    func ensureRunning() async {
+        if await Self.healthy() { return }
+        guard FileManager.default.isExecutableFile(atPath: BuildConfig.nodePath) else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: BuildConfig.nodePath)
+        p.arguments = ["--disable-warning=ExperimentalWarning", "server/src/index.js"]
+        p.currentDirectoryURL = URL(fileURLWithPath: BuildConfig.projectDir)
+        let logDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".tokentracking")
+        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+        let logURL = logDir.appendingPathComponent("service.log")
+        if !FileManager.default.fileExists(atPath: logURL.path) { FileManager.default.createFile(atPath: logURL.path, contents: nil) }
+        if let log = try? FileHandle(forWritingTo: logURL) {
+            log.seekToEndOfFile()
+            p.standardOutput = log
+            p.standardError = log
+        }
+        do { try p.run(); process = p } catch { return }
+        for _ in 0..<20 { // wait up to ~5 s for it to come up
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if await Self.healthy() { return }
+        }
+    }
+
+    func stop() { process?.terminate() }
+
+    static func healthy() async -> Bool {
+        var req = URLRequest(url: baseURL.appendingPathComponent("api/health"))
+        req.timeoutInterval = 1
+        return (try? await URLSession.shared.data(for: req)) != nil
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { ServiceRunner.shared.stop() }
+    }
+}
+
 @main
 struct TokenTrackingMenuApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = StatusModel()
 
     var body: some Scene {
@@ -49,7 +96,11 @@ final class StatusModel: ObservableObject {
     private var timer: Timer?
 
     init() {
-        poll()
+        Task { @MainActor in
+            await ServiceRunner.shared.ensureRunning()
+            self.poll()
+            self.webView.reload()
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
@@ -57,6 +108,7 @@ final class StatusModel: ObservableObject {
 
     func poll() {
         Task {
+            if !(await ServiceRunner.healthy()) { await ServiceRunner.shared.ensureRunning() } // restart if it died
             do {
                 let (data, _) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("api/status"))
                 apply(try JSONDecoder().decode(Status.self, from: data))
@@ -122,7 +174,7 @@ struct PanelView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
                     Text("The TokenTracking service isn't running.").font(.headline)
-                    Text("Start it with `npm start` in the project folder.").foregroundStyle(.secondary)
+                    Text("It's started automatically; see ~/.tokentracking/service.log").foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

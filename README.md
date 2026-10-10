@@ -77,7 +77,13 @@ npm run build:menubar
 open build/TokenTracking.app
 ```
 
-This adds an icon at the top right showing your **most at-risk meter**: the worst pace status first, then the highest %. The gauge icon fills as usage rises. Clicking it opens a compact dashboard with **Refresh now**, **Open dashboard** and **Quit**. It has no Dock icon and reads from the local service, so `npm start` must be running. To launch it at login, add `build/TokenTracking.app` under System Settings → General → Login Items.
+This adds an icon at the top right showing your **most at-risk meter**: the worst pace status first, then the highest %. The gauge icon fills as usage rises. Clicking it opens a compact dashboard with **Refresh now**, **Open dashboard** and **Quit**. It has no Dock icon.
+
+**The app is the only thing you need to run.** It starts the local service in the background if it isn't already running, restarts it if it dies, and stops it when you quit. Service logs go to `~/.tokentracking/service.log`. To start everything at login, add `build/TokenTracking.app` under **System Settings → General → Login Items**. The paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
+
+**Can't see the icon?**
+- On a MacBook, icons that don't fit beside the notch are hidden. Quit or Cmd-drag other menu bar icons.
+- Check **System Settings → Menu Bar → Allow in the Menu Bar**.
 
 ### Try it with demo data
 

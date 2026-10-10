@@ -5,7 +5,8 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 ## Next
 - [ ] **Headless refresh:** log in (`npm run browser-login`), verify all four services end to end, watch for bot blocks over a few days. Then decide whether to remove the extension (or keep it as a fallback) and remove ADR-008's hidden mode.
 - [x] **macOS menu bar app** (option C): Swift `MenuBarExtra` + compact dashboard (2026-10-10).
-- [ ] **Start the service at login:** a LaunchAgent (`~/Library/LaunchAgents`) running `npm start` with KeepAlive. The app could also offer "Start service" when it's down.
+- [x] **One moving part:** the menu bar app starts, restarts and stops the service. Add the app to Login Items to start at login.
+- [ ] Optional: port the service to Swift inside the app (no Node at all): SQLite via libsqlite3, CDP over a pipe, the panel rendered natively.
 - [ ] Menu bar: optional notifications at 85% / over-pace; choose which meter drives the title.
 
 ## Earlier items

@@ -5,6 +5,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 ## [Unreleased]
 ### Added
 - **macOS menu bar app** (`menubar/`, `npm run build:menubar`): the most at-risk meter in the menu bar, plus a compact dashboard panel with Refresh now / Open dashboard / Quit. No Dock icon.
+- The menu bar app starts the local service itself (and restarts or stops it), so it's the only thing to run. Logs: `~/.tokentracking/service.log`.
 - Dashboard compact mode (`/?compact`). Login notices are merged into one line.
 ### Fixed
 - Sparklines didn't span the full width when the chart was shorter than 36 px.

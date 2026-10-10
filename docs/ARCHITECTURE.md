@@ -86,6 +86,7 @@ A SwiftUI `MenuBarExtra` (window style) built with plain `swiftc` by `scripts/bu
 - **Title:** polls `GET /api/status` every 60 s and shows the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %) with a gauge symbol.
 - **Panel:** a `WKWebView` of `/?compact` (the dashboard's single-column mode), with Refresh now (`POST /api/refresh`), Open dashboard and Quit.
 - **Service down:** if the service is unreachable, the panel says so.
+- **Owns the service:** `ServiceRunner` checks `/api/health` on launch and on every poll. If the service is down, it starts `node server/src/index.js` as a child process, with stdout/stderr going to `~/.tokentracking/service.log`. It terminates the child on quit. It never stops a service it didn't start, e.g. a manual `npm start`. The project and Node paths come from `BuildConfig.swift`, which the build script generates.
 - **Config:** `TOKENTRACKING_URL` overrides the service URL.
 
 ## Data model
