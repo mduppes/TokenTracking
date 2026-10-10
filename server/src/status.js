@@ -1,6 +1,8 @@
 import { computePace, WINDOW_HOURS } from './pacing.js';
 
 export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)', antigravity: 'Antigravity' };
+// Display order for providers everywhere (dashboard cards, table, CLI); unknown ids go last, A–Z.
+const PROVIDER_ORDER = ['claude', 'cursor', 'antigravity', 'muse', 'gemini'];
 const WINDOW_ORDER = { session: 0, daily: 1, weekly: 2, monthly: 3, other: 4 };
 const DEFAULT_STALE_AFTER_MS = 60 * 6e4;
 const HIDE_AFTER_DAYS = 7;
@@ -34,5 +36,7 @@ export function buildStatus(db, now = new Date(), { staleAfterMs = DEFAULT_STALE
     if (!p.lastCapturedAt || row.captured_at > p.lastCapturedAt) p.lastCapturedAt = row.captured_at;
   }
   for (const p of providers.values()) p.meters.sort((a, b) => (WINDOW_ORDER[a.window] ?? 9) - (WINDOW_ORDER[b.window] ?? 9) || a.label.localeCompare(b.label));
-  return { generatedAt: now.toISOString(), providers: [...providers.values()] };
+  const rank = (id) => (PROVIDER_ORDER.includes(id) ? PROVIDER_ORDER.indexOf(id) : PROVIDER_ORDER.length);
+  const ordered = [...providers.values()].sort((a, b) => rank(a.id) - rank(b.id) || a.id.localeCompare(b.id));
+  return { generatedAt: now.toISOString(), providers: ordered };
 }

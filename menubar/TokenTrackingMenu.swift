@@ -181,9 +181,9 @@ enum MenuBarGlyphs {
     static let services: [(id: String, symbol: String, name: String, matches: (String, String) -> Bool)] = [
         ("claude", "asterisk", "Claude", { p, _ in p == "claude" }),
         ("cursor", "cursorarrow", "Cursor", { p, m in p == "cursor" && m != "grok-bot" }),
+        ("antigravity", "arrow.up.circle", "Antigravity", { p, _ in p == "antigravity" }),
         ("grok-bot", "xmark", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
         ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
-        ("antigravity", "arrow.up.circle", "Antigravity", { p, _ in p == "antigravity" }),
     ]
 
     /// Two characters: % used 0–99 (single digits padded with a trailing figure space so the width is

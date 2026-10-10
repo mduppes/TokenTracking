@@ -3,6 +3,8 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Consistent service order everywhere: Claude, Cursor, Antigravity, (Grok Bot), Muse, Gemini. The menu bar shows Claude ✳, Cursor ➚, Antigravity ⇧, Grok Bot ✕, Muse Ⓜ; Gemini is dashboard-only.
 ### Fixed
 - **Menu bar icon hidden even though "Allow in the Menu Bar" was on.** The permission was tied to an older ad-hoc-signed build. Builds are now signed with a stable self-signed local certificate (`scripts/create-signing-cert.sh`), and the bundle id changed to `io.github.mduppes.tokentracking` (a fresh entry; old entries can be switched off).
 - Menu bar icon never appeared: recent macOS hides new apps' menu bar items until they're allowed in System Settings → Menu Bar. The app now detects a hidden icon continuously, explains it in the fallback window (with an "Open Menu Bar settings" button), and returns to the menu bar once it's allowed.
