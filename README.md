@@ -78,7 +78,11 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.
 - **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.
 - **Moving things:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
-- **Can't see the icon?** When the menu bar is full (common on a MacBook with a notch), macOS silently doesn't show new icons. TokenTracking detects this and falls back to a **Dock icon** that opens the same panel in a small window. To get the menu bar icon back, make room (turn off items in **System Settings → Menu Bar**, or Cmd-drag icons out), then relaunch the app.
+- **Can't see the icon?** macOS hides menu bar icons in two cases:
+  - **The app isn't allowed yet.** Recent macOS starts new menu bar apps switched off. Turn **TokenTracking** on under **System Settings → Menu Bar → Allow in the Menu Bar**.
+  - **The menu bar is full**, common on a MacBook with a notch. Turn off other items or Cmd-drag them out.
+
+  While the icon is hidden, TokenTracking shows a **Dock icon** and the same panel in a small window, with a button to that settings page. When the icon appears, it switches back by itself.
 
 ### Try the UI with demo data
 

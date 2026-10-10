@@ -85,9 +85,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             observer = model.objectWillChange.sink { [weak self] _ in
                 DispatchQueue.main.async { MainActor.assumeIsolated { self?.updateButton() } }
             }
-            // If the menu bar is full (common with a notch), macOS silently doesn't show new items.
-            // Fall back to a Dock icon that opens the same panel in a small window.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated { self.checkVisible() } }
+            // macOS silently hides menu bar items when the bar is full (notch) or when the app isn't
+            // allowed in System Settings → Menu Bar (new apps start disallowed on recent macOS).
+            // Watch for that: fall back to a Dock icon + window, and switch back once the item shows.
+            Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.checkVisible() }
+            }
         }
     }
 
@@ -95,10 +98,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor private func checkVisible() {
         let visible = statusItem.button?.window?.occlusionState.contains(.visible) ?? false
-        guard !visible else { return }
-        NSLog("TokenTracking: menu bar item not visible (menu bar full?); showing Dock icon + window")
-        NSApp.setActivationPolicy(.regular)
-        showWindow()
+        if visible, model.menuBarHidden {
+            // The icon is back (user allowed it or made room): return to menu-bar-only mode.
+            model.menuBarHidden = false
+            fallbackWindow?.close()
+            NSApp.setActivationPolicy(.accessory)
+        } else if !visible, !model.menuBarHidden {
+            NSLog("TokenTracking: menu bar item hidden (not allowed in System Settings → Menu Bar, or no room); using Dock icon + window")
+            model.menuBarHidden = true
+            NSApp.setActivationPolicy(.regular)
+            showWindow()
+        }
     }
 
     @MainActor private func showWindow() {
@@ -232,6 +242,7 @@ final class StatusModel: ObservableObject {
     @Published var symbol = "gauge.with.dots.needle.0percent"
     @Published var reachable = true
     @Published var refreshing = false
+    @Published var menuBarHidden = false
 
     lazy var webView: WKWebView = {
         let w = WKWebView()
@@ -335,6 +346,23 @@ struct PanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if model.menuBarHidden {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "menubar.rectangle").foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("The menu bar icon is hidden").font(.headline)
+                        Text("Allow TokenTracking under System Settings → Menu Bar, or make room in the menu bar. This window closes by itself once the icon shows.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        Button("Open Menu Bar settings") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.12))
+                Divider()
+            }
             if model.reachable {
                 WebView(webView: model.webView)
             } else {
