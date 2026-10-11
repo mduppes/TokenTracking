@@ -22,8 +22,8 @@ lib/                  shared, pure-ish: parse.js (meters, reset text), providers
 server/src/           Node service: index (timer, parent-PID watch), server (HTTP), db, pacing, status, cli
 server/src/headless/  chrome.js = launch + CDP over pipe + browser identity; refresh.js = per-provider TASKS (+ local sources)
 server/src/local/     antigravity.js = local language-server reader (ADR-011)
-server/public/        dashboard (vanilla JS; /?compact = menu bar panel view)
-menubar/              macOS menu bar app (NSStatusItem + popover/WKWebView) + AppIcon.icns; scripts/build-menubar.sh builds it
+server/public/        dashboard (vanilla JS; /?compact = narrow single-column view)
+menubar/              macOS menu bar app (NSStatusItem + native SwiftUI panel) + AppIcon.icns; scripts/build-menubar.sh builds it
 assets/icon.svg       app icon source → npm run build:icon
 scripts/              browser-login, refresh-once, seed-demo, build-menubar
 test/                 node:test suites (headless.test.js drives real Chrome against fixtures)

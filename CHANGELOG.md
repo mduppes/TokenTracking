@@ -6,7 +6,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 ### Added
 - **Log in button** on stale and needs-login notices (dashboard and menu bar panel). It opens the TokenTracking browser on that service (`POST /api/login`), and that service refreshes automatically when you quit the window. Partial refreshes merge into the last results.
 ### Fixed
-- **Blank menu bar panel** after the Mac slept: the panel now creates a brand-new web view every time it opens (reloading the old one wasn't enough), and reloads itself if WebKit's page process dies or a load fails.
+- **Blank menu bar panel** after the Mac slept: the panel is now **native SwiftUI** instead of an embedded web view. Neither reloading nor recreating the web view on every open fixed it. It shows the same content: notices with Log in, "Resets next", and every meter with bar, even-pace tick and countdown.
 - **Muse** went stale while its agent was slow to connect ("Connecting…", no Usage section yet; worst when out of tokens). The refresh now waits for the page, then up to 2 min for the connection, and otherwise reads the "You've reached your usage limit … reset at …" notice (100% + reset time). The Muse meter is now `weekly` / "Weekly limit", with the plan shown separately.
 - Dashboard **favicon** (the app icon; `npm run build:icon` also writes `server/public/favicon.png`).
 ### Changed

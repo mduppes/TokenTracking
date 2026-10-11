@@ -2,7 +2,6 @@
 // dashboard (served by the local service at /?compact) in a pop-down panel. No dependencies; built
 // with `npm run build:menubar` (swiftc, no Xcode project). See docs/ARCHITECTURE.md.
 import SwiftUI
-import WebKit
 import Combine
 
 let baseURL = URL(string: ProcessInfo.processInfo.environment["TOKENTRACKING_URL"] ?? "http://127.0.0.1:7878")!
@@ -228,10 +227,40 @@ enum MenuBarGlyphs {
 // MARK: - Status polling
 
 struct Status: Decodable {
-    struct Provider: Decodable { let id: String; let name: String; let meters: [Meter] }
-    struct Meter: Decodable { let id: String; let label: String; let usedPercent: Double?; let pace: Pace; let stale: Bool }
-    struct Pace: Decodable { let status: String }
+    struct Provider: Decodable, Identifiable {
+        let id: String; let name: String; let plan: String?; let meters: [Meter]
+    }
+    struct Meter: Decodable, Identifiable {
+        let id: String; let label: String; let window: String; let usedPercent: Double?
+        let resetsAt: String?; let capturedAt: String; let stale: Bool; let pace: Pace
+    }
+    struct Pace: Decodable { let status: String; let expectedPercent: Double? }
+    struct Run: Decodable { let status: String; let message: String? }
+    struct Headless: Decodable { let at: String?; let nextAt: String?; let results: [String: Run]? }
     let providers: [Provider]
+    let headless: Headless?
+}
+
+/// ISO-8601 with or without fractional seconds (the service sends milliseconds).
+func parseDate(_ s: String?) -> Date? {
+    guard let s else { return nil }
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = f.date(from: s) { return d }
+    f.formatOptions = [.withInternetDateTime]
+    return f.date(from: s)
+}
+
+/// "2d 4h", "3h 12m", "45m"
+func shortDuration(_ seconds: TimeInterval) -> String {
+    let m = max(0, Int(seconds / 60)), d = m / 1440, h = (m % 1440) / 60
+    return d > 0 ? "\(d)d \(h)h" : h > 0 ? "\(h)h \(m % 60)m" : "\(m % 60)m"
+}
+
+func ago(_ date: Date?) -> String {
+    guard let date else { return "never" }
+    let m = Int(-date.timeIntervalSinceNow / 60)
+    return m < 1 ? "just now" : m < 60 ? "\(m)m ago" : m < 1440 ? "\(m / 60)h ago" : "\(m / 1440)d ago"
 }
 
 @MainActor
@@ -243,33 +272,10 @@ final class StatusModel: ObservableObject {
     @Published var reachable = true
     @Published var refreshing = false
     @Published var menuBarHidden = false
-
-    private let panelURL = URL(string: "/?compact", relativeTo: baseURL)!
-    private let webGuard = WebGuard()
-
-    /// The panel's web view. Replaced with a brand-new instance every time the panel opens: after a long
-    /// sleep an existing WKWebView can end up drawing nothing (transparent panel) even though loads
-    /// succeed (seen 2026-10-11), and a fresh instance is cheap and always renders.
-    @Published private(set) var webView: WKWebView = WKWebView()
-
-    private func makeWebView() -> WKWebView {
-        let w = WKWebView()
-        w.setValue(false, forKey: "drawsBackground")
-        w.navigationDelegate = webGuard
-        w.load(URLRequest(url: panelURL, cachePolicy: .reloadIgnoringLocalCacheData))
-        return w
-    }
-
-    /// Reload the current web view in place (used by WebGuard for process crashes and failed loads).
-    func loadPanel() {
-        webView.load(URLRequest(url: panelURL, cachePolicy: .reloadIgnoringLocalCacheData))
-    }
-
-    /// Swap in a fresh web view (the old one is released along with its web content process).
-    func freshPanel() {
-        webGuard.reload = { [weak self] in self?.loadPanel() }
-        webView = makeWebView()
-    }
+    /// Latest /api/status, rendered natively by PanelView. (The panel used to be a WKWebView of the
+    /// dashboard, but after the Mac slept it often drew nothing at all, even when recreated: 2026-10-11.)
+    @Published var status: Status?
+    @Published var loginNote: [String: String] = [:]
 
     private var timer: Timer?
 
@@ -277,7 +283,6 @@ final class StatusModel: ObservableObject {
         Task { @MainActor in
             await ServiceRunner.shared.ensureRunning()
             self.poll()
-            self.freshPanel()
         }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
@@ -289,7 +294,9 @@ final class StatusModel: ObservableObject {
             if !(await ServiceRunner.healthy()) { await ServiceRunner.shared.ensureRunning() } // restart if it died
             do {
                 let (data, _) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("api/status"))
-                apply(try JSONDecoder().decode(Status.self, from: data))
+                let s = try JSONDecoder().decode(Status.self, from: data)
+                status = s
+                apply(s)
                 reachable = true
             } catch {
                 reachable = false
@@ -299,9 +306,8 @@ final class StatusModel: ObservableObject {
         }
     }
 
-    /// Title = the most at-risk meter: worst pace status first, then highest % used.
+    /// Menu bar: per-service digits; tooltip: per-service values + the most at-risk meter.
     private func apply(_ s: Status) {
-        // Per-service digits: the worst (highest %) meter of each service that has data.
         var lines: [String] = []
         slots = MenuBarGlyphs.services.compactMap { svc in
             let ms = s.providers.flatMap { p in p.meters.filter { svc.matches(p.id, $0.id) } }
@@ -323,7 +329,7 @@ final class StatusModel: ObservableObject {
             title = "–"; symbol = "gauge.with.dots.needle.0percent"; tooltip = "TokenTracking: no data yet"; return
         }
         title = "\(Int(pct.rounded()))%"
-        let paceText = ["limited": "limit reached", "over-pace": "will run out before reset", "ahead": "ahead of pace", "ok": "on pace"][top.pace.status] ?? ""
+        let paceText = PaceText.label[top.pace.status]?.lowercased() ?? ""
         tooltip = (lines + ["", "Most at risk: \(name) · \(top.label): \(Int(pct.rounded()))% used\(paceText.isEmpty ? "" : " (\(paceText))")"]).joined(separator: "\n")
         switch pct {
         case ..<25: symbol = "gauge.with.dots.needle.0percent"
@@ -334,79 +340,79 @@ final class StatusModel: ObservableObject {
         }
     }
 
-    func panelOpened() {
-        poll()
-        freshPanel()
-    }
+    func panelOpened() { poll() }
 
     func refreshNow() async {
         refreshing = true
-        var req = URLRequest(url: baseURL.appendingPathComponent("api/refresh"))
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "content-type")
-        req.httpBody = Data("{}".utf8)
-        req.timeoutInterval = 180
-        _ = try? await URLSession.shared.data(for: req)
+        _ = try? await post("api/refresh", body: "{}", timeout: 180)
         refreshing = false
         poll()
-        loadPanel()
+    }
+
+    /// Opens the TokenTracking browser on a provider's login page (POST /api/login).
+    func logIn(_ provider: String) async {
+        loginNote[provider] = "Opening…"
+        do {
+            let (data, res) = try await post("api/login", body: "{\"provider\":\"\(provider)\"}", timeout: 10)
+            let ok = (res as? HTTPURLResponse)?.statusCode == 200
+            let reason = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["reason"] as? String
+            loginNote[provider] = ok ? "Log in, then quit that window (⌘Q). It refreshes automatically." : (reason ?? "Couldn't open the login window.")
+        } catch { loginNote[provider] = "The service isn't reachable." }
+    }
+
+    private func post(_ path: String, body: String, timeout: TimeInterval) async throws -> (Data, URLResponse) {
+        var req = URLRequest(url: baseURL.appendingPathComponent(path))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "content-type")
+        req.httpBody = Data(body.utf8)
+        req.timeoutInterval = timeout
+        return try await URLSession.shared.data(for: req)
     }
 }
 
-// MARK: - Panel
+// MARK: - Panel (native SwiftUI)
 
-/// Keeps the panel's web view alive: if WebKit's content process dies (e.g. memory pressure during sleep)
-/// or a load fails (service restarting), load the page again instead of staying blank.
-final class WebGuard: NSObject, WKNavigationDelegate {
-    var reload: (() -> Void)?
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { reload?() }
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { retry(error) }
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { retry(error) }
-    private func retry(_ error: Error) {
-        // A newer load cancels the previous one; that's not a failure (retrying would loop forever).
-        if (error as NSError).code == NSURLErrorCancelled { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.reload?() }
+enum PaceText {
+    static let label = ["ok": "On pace", "ahead": "Ahead of pace", "over-pace": "Will run out before reset", "limited": "Limit reached", "unknown": "Pace unknown"]
+    static func color(_ status: String) -> Color {
+        switch status {
+        case "ok": return .green
+        case "ahead": return .yellow
+        case "over-pace": return .orange
+        case "limited": return .red
+        default: return .secondary
+        }
     }
 }
 
-struct WebView: NSViewRepresentable {
-    let webView: WKWebView
-    func makeNSView(context: Context) -> WKWebView { webView }
-    func updateNSView(_ nsView: WKWebView, context: Context) {}
-}
+/// Providers that use the TokenTracking browser profile (the Log in button opens a login window).
+let loginProviders: Set<String> = ["claude", "cursor", "gemini", "muse"]
 
 struct PanelView: View {
     @ObservedObject var model: StatusModel
 
     var body: some View {
         VStack(spacing: 0) {
-            if model.menuBarHidden {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "menubar.rectangle").foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("The menu bar icon is hidden").font(.headline)
-                        Text("Allow TokenTracking under System Settings → Menu Bar, or make room in the menu bar. This window closes by itself once the icon shows.")
-                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        Button("Open Menu Bar settings") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
-                        }
-                    }
-                }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.12))
-                Divider()
-            }
-            if model.reachable {
-                WebView(webView: model.webView)
-                    .id(ObjectIdentifier(model.webView)) // new instance → SwiftUI swaps the NSView
-            } else {
+            if model.menuBarHidden { hiddenBanner; Divider() }
+            if !model.reachable {
                 VStack(spacing: 8) {
                     Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
                     Text("The TokenTracking service isn't running.").font(.headline)
                     Text("It's started automatically; see ~/.tokentracking/service.log").foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let s = model.status {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        header(s)
+                        notices(s)
+                        resetsNext(s)
+                        ForEach(s.providers) { ProviderCard(provider: $0) }
+                    }
+                    .padding(14)
+                }
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Divider()
             HStack {
@@ -423,6 +429,151 @@ struct PanelView: View {
             .padding(10)
         }
         .frame(width: 400, height: 560)
-        
+    }
+
+    private var hiddenBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "menubar.rectangle").foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("The menu bar icon is hidden").font(.headline)
+                Text("Allow TokenTracking under System Settings → Menu Bar, or make room in the menu bar. This window closes by itself once the icon shows.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button("Open Menu Bar settings") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
+                }
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
+    }
+
+    private func header(_ s: Status) -> some View {
+        let latest = s.providers.flatMap(\.meters).compactMap { parseDate($0.capturedAt) }.max()
+        var line = "Updated \(ago(latest))"
+        if let next = parseDate(s.headless?.nextAt) {
+            line += next.timeIntervalSinceNow > 0 ? " · next refresh in \(shortDuration(next.timeIntervalSinceNow))" : " · refreshing…"
+        }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("TokenTracking").font(.headline)
+            Text(line).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Stale services and refresh problems, each with a Log in button where that helps.
+    @ViewBuilder private func notices(_ s: Status) -> some View {
+        let results = s.headless?.results ?? [:]
+        let stale = s.providers.filter { $0.meters.contains(where: \.stale) }
+        let staleIds = Set(stale.map(\.id))
+        let problems = results.filter { !staleIds.contains($0.key) && $0.value.status != "ok" && $0.value.status != "skipped" }
+            .sorted { $0.key < $1.key }
+        ForEach(stale) { p in
+            let oldest = p.meters.filter(\.stale).compactMap { parseDate($0.capturedAt) }.min()
+            let why = results[p.id].flatMap { $0.status == "ok" ? nil : ($0.status == "login" ? "needs a login" : $0.message) }
+            notice(id: p.id, color: .secondary, text: "\(p.name) is stale: last read \(ago(oldest))" + (why.map { " · \($0)" } ?? ""))
+        }
+        ForEach(problems, id: \.key) { id, r in
+            let name = s.providers.first { $0.id == id }?.name ?? id.capitalized
+            notice(id: id, color: r.status == "login" ? .red : .orange, text: r.status == "login" ? "\(name) needs a login" : "\(name): \(r.message ?? r.status)")
+        }
+    }
+
+    private func notice(id: String, color: Color, text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle().fill(color).frame(width: 8, height: 8).padding(.top, 5)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(text).font(.callout).fixedSize(horizontal: false, vertical: true)
+                if let note = model.loginNote[id] { Text(note).font(.caption).foregroundStyle(.secondary) }
+            }
+            Spacer(minLength: 4)
+            if loginProviders.contains(id), model.loginNote[id] == nil {
+                Button("Log in") { Task { await model.logIn(id) } }.controlSize(.small)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
+    }
+
+    /// The five meters that reset soonest.
+    @ViewBuilder private func resetsNext(_ s: Status) -> some View {
+        let rows = s.providers.flatMap { p in p.meters.compactMap { m in parseDate(m.resetsAt).map { (p, m, $0) } } }
+            .sorted { $0.2 < $1.2 }.prefix(5)
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Resets next").font(.subheadline.weight(.semibold))
+                ForEach(Array(rows), id: \.1.id.hashValue) { p, m, date in
+                    HStack {
+                        Text("\(p.name) · \(m.label)").font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                        Spacer()
+                        Text(m.usedPercent.map { "\(Int($0.rounded()))%" } ?? "?").font(.callout.monospacedDigit())
+                            .foregroundStyle(m.pace.status == "ok" ? Color.secondary : PaceText.color(m.pace.status))
+                        Text(date.timeIntervalSinceNow > 0 ? "in \(shortDuration(date.timeIntervalSinceNow))" : "reset")
+                            .font(.callout.monospacedDigit().weight(.semibold)).frame(minWidth: 64, alignment: .trailing)
+                        if m.stale { Text("stale").font(.caption2).foregroundStyle(.secondary) }
+                    }
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
+        }
+    }
+}
+
+struct ProviderCard: View {
+    let provider: Status.Provider
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(provider.name).font(.headline)
+                if let plan = provider.plan { Text(plan.replacingOccurrences(of: "claude_", with: "").capitalized).font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+            }
+            ForEach(provider.meters) { MeterRow(meter: $0) }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
+    }
+}
+
+struct MeterRow: View {
+    let meter: Status.Meter
+
+    var body: some View {
+        let pct = meter.usedPercent ?? 0
+        let color = PaceText.color(meter.pace.status)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(meter.label).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+                pill(color: meter.pace.status == "ok" ? .blue : color)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.1))
+                    Capsule().fill(color).frame(width: geo.size.width * min(1, pct / 100))
+                    if let e = meter.pace.expectedPercent {
+                        Rectangle().fill(Color.primary).frame(width: 2, height: 12).offset(x: geo.size.width * min(1, e / 100) - 1)
+                    }
+                }
+            }
+            .frame(height: 7)
+            HStack(spacing: 6) {
+                Text(meter.usedPercent.map { "\(Int($0.rounded()))%" } ?? "?").font(.callout.monospacedDigit().weight(.semibold))
+                Text(PaceText.label[meter.pace.status] ?? "").font(.caption).foregroundStyle(.secondary)
+                if meter.stale { Text("· last read \(ago(parseDate(meter.capturedAt)))").font(.caption).foregroundStyle(.orange) }
+            }
+        }
+    }
+
+    private func pill(color: Color) -> some View {
+        let date = parseDate(meter.resetsAt)
+        let text = date.map { $0.timeIntervalSinceNow > 0 ? shortDuration($0.timeIntervalSinceNow) : "reset" } ?? "?"
+        return Label(text, systemImage: "arrow.clockwise")
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.18)))
+            .foregroundStyle(color)
+            .help(date.map { "Resets \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "Reset time unknown")
     }
 }
