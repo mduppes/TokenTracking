@@ -247,19 +247,28 @@ final class StatusModel: ObservableObject {
     private let panelURL = URL(string: "/?compact", relativeTo: baseURL)!
     private let webGuard = WebGuard()
 
-    lazy var webView: WKWebView = {
+    /// The panel's web view. Replaced with a brand-new instance every time the panel opens: after a long
+    /// sleep an existing WKWebView can end up drawing nothing (transparent panel) even though loads
+    /// succeed (seen 2026-10-11), and a fresh instance is cheap and always renders.
+    @Published private(set) var webView: WKWebView = WKWebView()
+
+    private func makeWebView() -> WKWebView {
         let w = WKWebView()
         w.setValue(false, forKey: "drawsBackground")
         w.navigationDelegate = webGuard
-        webGuard.reload = { [weak self] in self?.loadPanel() }
-        w.load(URLRequest(url: panelURL))
+        w.load(URLRequest(url: panelURL, cachePolicy: .reloadIgnoringLocalCacheData))
         return w
-    }()
+    }
 
-    /// Always a fresh load, not reload(): after sleep the page's web process can be gone (blank panel),
-    /// or the first load may have failed before the service was up. Either way reload() has nothing to reload.
+    /// Reload the current web view in place (used by WebGuard for process crashes and failed loads).
     func loadPanel() {
         webView.load(URLRequest(url: panelURL, cachePolicy: .reloadIgnoringLocalCacheData))
+    }
+
+    /// Swap in a fresh web view (the old one is released along with its web content process).
+    func freshPanel() {
+        webGuard.reload = { [weak self] in self?.loadPanel() }
+        webView = makeWebView()
     }
 
     private var timer: Timer?
@@ -268,7 +277,7 @@ final class StatusModel: ObservableObject {
         Task { @MainActor in
             await ServiceRunner.shared.ensureRunning()
             self.poll()
-            self.loadPanel()
+            self.freshPanel()
         }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
@@ -327,7 +336,7 @@ final class StatusModel: ObservableObject {
 
     func panelOpened() {
         poll()
-        loadPanel()
+        freshPanel()
     }
 
     func refreshNow() async {
@@ -390,6 +399,7 @@ struct PanelView: View {
             }
             if model.reachable {
                 WebView(webView: model.webView)
+                    .id(ObjectIdentifier(model.webView)) // new instance → SwiftUI swaps the NSView
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
