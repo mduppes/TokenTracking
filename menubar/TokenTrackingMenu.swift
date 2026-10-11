@@ -228,17 +228,25 @@ enum MenuBarGlyphs {
 
 struct Status: Decodable {
     struct Provider: Decodable, Identifiable {
-        let id: String; let name: String; let plan: String?; let meters: [Meter]
+        let id: String; let name: String; let planLabel: String?; let meters: [Meter]
     }
     struct Meter: Decodable, Identifiable {
         let id: String; let label: String; let window: String; let usedPercent: Double?
         let resetsAt: String?; let capturedAt: String; let stale: Bool; let pace: Pace
     }
     struct Pace: Decodable { let status: String; let expectedPercent: Double? }
-    struct Run: Decodable { let status: String; let message: String? }
-    struct Headless: Decodable { let at: String?; let nextAt: String?; let results: [String: Run]? }
+    struct Headless: Decodable { let nextAt: String? }
+    /// Built by the service (server/src/status.js withPresentation) so the web dashboard and this panel
+    /// show the same notices and resets without duplicating the rules.
+    struct Notice: Decodable { let provider: String; let kind: String; let text: String; let canLogIn: Bool }
+    struct Reset: Decodable {
+        let provider: String; let providerName: String; let meterId: String; let label: String
+        let usedPercent: Double?; let resetsAt: String; let status: String; let stale: Bool
+    }
     let providers: [Provider]
     let headless: Headless?
+    let notices: [Notice]
+    let resetsNext: [Reset]
 }
 
 /// ISO-8601 with or without fractional seconds (the service sends milliseconds).
@@ -385,9 +393,6 @@ enum PaceText {
     }
 }
 
-/// Providers that use the TokenTracking browser profile (the Log in button opens a login window).
-let loginProviders: Set<String> = ["claude", "cursor", "gemini", "muse"]
-
 struct PanelView: View {
     @ObservedObject var model: StatusModel
 
@@ -460,25 +465,14 @@ struct PanelView: View {
         }
     }
 
-    /// Stale services and refresh problems, each with a Log in button where that helps.
+    /// Notices come ready-made from the service (same as the web dashboard).
     @ViewBuilder private func notices(_ s: Status) -> some View {
-        let results = s.headless?.results ?? [:]
-        let stale = s.providers.filter { $0.meters.contains(where: \.stale) }
-        let staleIds = Set(stale.map(\.id))
-        let problems = results.filter { !staleIds.contains($0.key) && $0.value.status != "ok" && $0.value.status != "skipped" }
-            .sorted { $0.key < $1.key }
-        ForEach(stale) { p in
-            let oldest = p.meters.filter(\.stale).compactMap { parseDate($0.capturedAt) }.min()
-            let why = results[p.id].flatMap { $0.status == "ok" ? nil : ($0.status == "login" ? "needs a login" : $0.message) }
-            notice(id: p.id, color: .secondary, text: "\(p.name) is stale: last read \(ago(oldest))" + (why.map { " · \($0)" } ?? ""))
-        }
-        ForEach(problems, id: \.key) { id, r in
-            let name = s.providers.first { $0.id == id }?.name ?? id.capitalized
-            notice(id: id, color: r.status == "login" ? .red : .orange, text: r.status == "login" ? "\(name) needs a login" : "\(name): \(r.message ?? r.status)")
+        ForEach(Array(s.notices.enumerated()), id: \.offset) { _, n in
+            notice(id: n.provider, color: n.kind == "login" ? .red : n.kind == "error" ? .orange : .secondary, text: n.text, canLogIn: n.canLogIn)
         }
     }
 
-    private func notice(id: String, color: Color, text: String) -> some View {
+    private func notice(id: String, color: Color, text: String, canLogIn: Bool) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Circle().fill(color).frame(width: 8, height: 8).padding(.top, 5)
             VStack(alignment: .leading, spacing: 4) {
@@ -486,7 +480,7 @@ struct PanelView: View {
                 if let note = model.loginNote[id] { Text(note).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer(minLength: 4)
-            if loginProviders.contains(id), model.loginNote[id] == nil {
+            if canLogIn, model.loginNote[id] == nil {
                 Button("Log in") { Task { await model.logIn(id) } }.controlSize(.small)
             }
         }
@@ -494,22 +488,22 @@ struct PanelView: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
     }
 
-    /// The five meters that reset soonest.
+    /// The five meters that reset soonest (pre-sorted by the service).
     @ViewBuilder private func resetsNext(_ s: Status) -> some View {
-        let rows = s.providers.flatMap { p in p.meters.compactMap { m in parseDate(m.resetsAt).map { (p, m, $0) } } }
-            .sorted { $0.2 < $1.2 }.prefix(5)
+        let rows = Array(s.resetsNext.prefix(5))
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Resets next").font(.subheadline.weight(.semibold))
-                ForEach(Array(rows), id: \.1.id.hashValue) { p, m, date in
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                    let left = parseDate(r.resetsAt)?.timeIntervalSinceNow ?? 0
                     HStack {
-                        Text("\(p.name) · \(m.label)").font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                        Text("\(r.providerName) · \(r.label)").font(.callout).foregroundStyle(.secondary).lineLimit(1)
                         Spacer()
-                        Text(m.usedPercent.map { "\(Int($0.rounded()))%" } ?? "?").font(.callout.monospacedDigit())
-                            .foregroundStyle(m.pace.status == "ok" ? Color.secondary : PaceText.color(m.pace.status))
-                        Text(date.timeIntervalSinceNow > 0 ? "in \(shortDuration(date.timeIntervalSinceNow))" : "reset")
+                        Text(r.usedPercent.map { "\(Int($0.rounded()))%" } ?? "?").font(.callout.monospacedDigit())
+                            .foregroundStyle(r.status == "ok" ? Color.secondary : PaceText.color(r.status))
+                        Text(left > 0 ? "in \(shortDuration(left))" : "reset")
                             .font(.callout.monospacedDigit().weight(.semibold)).frame(minWidth: 64, alignment: .trailing)
-                        if m.stale { Text("stale").font(.caption2).foregroundStyle(.secondary) }
+                        if r.stale { Text("stale").font(.caption2).foregroundStyle(.secondary) }
                     }
                 }
             }
@@ -526,7 +520,7 @@ struct ProviderCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text(provider.name).font(.headline)
-                if let plan = provider.plan { Text(plan.replacingOccurrences(of: "claude_", with: "").capitalized).font(.caption).foregroundStyle(.secondary) }
+                if let plan = provider.planLabel { Text(plan).font(.caption).foregroundStyle(.secondary) }
                 Spacer()
             }
             ForEach(provider.meters) { MeterRow(meter: $0) }

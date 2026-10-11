@@ -64,18 +64,18 @@ function meterHtml(m, pi, mi) {
   </div>`;
 }
 
-/** "Resets next" list across all services, soonest first (option B). */
+/** "Resets next": rows come pre-sorted from the service (status.js withPresentation). */
 function renderUpNext() {
-  const rows = data.providers.flatMap((p) => p.meters.map((m) => ({ p, m })))
-    .filter(({ m }) => m.pace.remainingMs != null)
-    .sort((a, b) => a.m.pace.remainingMs - b.m.pace.remainingMs)
-    .slice(0, compact ? 5 : 8);
+  const rows = (data.resetsNext || []).slice(0, compact ? 5 : 8);
   if (!rows.length) { $('#upnext').innerHTML = ''; return; }
-  $('#upnext').innerHTML = `<section class="card upnext"><h2>Resets next</h2><div class="upnext-grid">${rows.map(({ p, m }) => `
-    <span class="un-name">${esc(p.name)} · ${esc(m.label)}</span>
-    <span class="un-pct s-text-${m.pace.status}">${m.usedPercent == null ? '?' : Math.round(m.usedPercent)}%</span>
-    <span class="un-in">${m.pace.remainingMs <= 0 ? 'reset' : `in ${dur(m.pace.remainingMs)}`}${m.stale ? ' <span class="stale-tag" title="Last read ' + ago(m.capturedAt) + '">stale</span>' : ''}</span>
-    <span class="un-when">${esc(when(m.resetsAt))}</span>`).join('')}</div></section>`;
+  $('#upnext').innerHTML = `<section class="card upnext"><h2>Resets next</h2><div class="upnext-grid">${rows.map((r) => {
+    const ms = Date.parse(r.resetsAt) - Date.now();
+    return `
+    <span class="un-name">${esc(r.providerName)} · ${esc(r.label)}</span>
+    <span class="un-pct s-text-${r.status}">${r.usedPercent == null ? '?' : Math.round(r.usedPercent)}%</span>
+    <span class="un-in">${ms <= 0 ? 'reset' : `in ${dur(ms)}`}${r.stale ? ` <span class="stale-tag" title="Last read ${ago(r.capturedAt)}">stale</span>` : ''}</span>
+    <span class="un-when">${esc(when(r.resetsAt))}</span>`;
+  }).join('')}</div></section>`;
 }
 
 /** Header: when the data was last read and when the next background refresh runs. */
@@ -114,45 +114,12 @@ function drawSpark(svg, m) {
   svg.onpointerleave = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
 }
 
-/** Providers that use the TokenTracking browser profile (POST /api/login opens a login window). */
-const LOGIN_PROVIDERS = new Set(['claude', 'cursor', 'gemini', 'muse']);
-
-const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse', antigravity: 'Antigravity' };
-
-/** "claude_max" → "Max", "pro" → "Pro" */
-const planLabel = (plan) => String(plan).replace(/^claude_/i, '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
-
+/** Notices (stale, needs login, errors) come ready-made from the service (status.js withPresentation). */
 function renderNotices() {
-  const h = data.headless || {};
   $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
-  const results = h.results || {};
-  const names = (ids) => {
-    const n = ids.map((id) => `<strong>${esc(PROVIDER_LABEL[id] || id)}</strong>`);
-    return n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n[0];
-  };
-  const reason = (r) => (r.status === 'login' ? 'needs a login' : r.message || r.status);
-  const loginBtn = (id) => (LOGIN_PROVIDERS.has(id) ? ` <button type="button" class="login-btn" data-provider="${esc(id)}">Log in</button>` : '');
-
-  // 1. Stale services: readings older than ~2 missed refreshes, with the last refresh's reason.
-  const stale = data.providers.filter((p) => p.meters.some((m) => m.stale));
-  const staleIds = new Set(stale.map((p) => p.id));
-  const staleNotes = stale.map((p) => {
-    const oldest = p.meters.filter((m) => m.stale).map((m) => m.capturedAt).sort()[0];
-    const r = results[p.id];
-    const why = r && r.status !== 'ok' ? ` · last refresh: ${esc(reason(r))}` : '';
-    return `<div class="notice"><span class="dot s-unknown"></span><span>${names([p.id])} is stale: last read ${ago(oldest)}${why}</span>${loginBtn(p.id)}</div>`;
-  });
-
-  // 2. Refresh problems for services that aren't already listed as stale.
-  const entries = Object.entries(results).filter(([id]) => !staleIds.has(id));
-  const login = entries.filter(([, r]) => r.status === 'login').map(([id]) => id);
-  const other = entries.filter(([, r]) => r.status !== 'ok' && r.status !== 'login' && r.status !== 'skipped');
-  const when = h.at ? ` <span class="muted">(last refresh ${ago(h.at)})</span>` : '';
-  $('#notices').innerHTML = [
-    ...staleNotes,
-    ...login.map((id) => `<div class="notice"><span class="dot s-limited"></span><span>${names([id])} needs a login${when}</span>${loginBtn(id)}</div>`),
-    ...other.map(([id, r]) => `<div class="notice"><span class="dot s-over-pace"></span><span>${names([id])}: ${esc(reason(r))}${when}</span></div>`),
-  ].join('');
+  const dot = { stale: 's-unknown', login: 's-limited', error: 's-over-pace' };
+  $('#notices').innerHTML = (data.notices || []).map((n) => `<div class="notice"><span class="dot ${dot[n.kind] || 's-unknown'}"></span><span>${esc(n.text)}</span>${
+    n.canLogIn ? ` <button type="button" class="login-btn" data-provider="${esc(n.provider)}">Log in</button>` : ''}</div>`).join('');
 }
 
 function render() {
@@ -168,7 +135,7 @@ function render() {
     return;
   }
   $('#grid').innerHTML = data.providers.map((p, pi) => `<section class="card">
-      <h2><span>${esc(p.name)}${p.plan ? ` <span class="meta">${esc(planLabel(p.plan))}</span>` : ''}</span><span class="meta">${ago(p.lastCapturedAt)}</span></h2>
+      <h2><span>${esc(p.name)}${p.planLabel ? ` <span class="meta">${esc(p.planLabel)}</span>` : ''}</span><span class="meta">${ago(p.lastCapturedAt)}</span></h2>
       ${p.meters.map((m, mi) => meterHtml(m, pi, mi)).join('')}
     </section>`).join('');
   document.querySelectorAll('svg.spark').forEach((svg) => drawSpark(svg, data.providers[svg.dataset.p].meters[svg.dataset.m]));

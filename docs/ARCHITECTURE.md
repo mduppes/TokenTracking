@@ -67,6 +67,15 @@ An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with
 - **Icon:** `assets/icon.svg` → `npm run build:icon` (headless Chrome rasterizes every size, then `iconutil`) → `menubar/AppIcon.icns`, copied into `Contents/Resources` with `CFBundleIconFile`.
 - **Config:** `TOKENTRACKING_URL` overrides the service URL.
 
+## One source of truth, two renderers
+
+`GET /api/status` is the single source for every UI. Besides the raw providers and meters (with pace and `stale`), the service adds **presentation fields** in `withPresentation()` (`server/src/status.js`):
+- `notices[]`: `{ provider, kind: stale | login | error, text, canLogIn }`. Stale services come first, with the last refresh's reason. Services that are `skipped` (e.g. Antigravity not running) get no notice. `canLogIn` is false for page errors.
+- `resetsNext[]`: every meter with a reset time, soonest first. UIs show the first N.
+- `providers[].planLabel`: "claude_max" becomes "Max".
+
+The web dashboard (`server/public/app.js`) and the menu bar panel (Swift `PanelView`) render these as-is. Only live countdowns are computed client-side, from `resetsAt`, because they tick. **To change wording or rules, edit `withPresentation` (tested in `test/presentation.test.js`), not the UIs.**
+
 ## Data model
 
 **Meter** (what parsers produce, stored one row per reading):

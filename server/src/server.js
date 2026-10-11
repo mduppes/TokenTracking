@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildStatus } from './status.js';
+import { buildStatus, withPresentation } from './status.js';
 import { lastHeadlessRun } from './headless/refresh.js';
 import { openLoginWindow, LOGIN_URLS } from './headless/login.js';
 
@@ -43,7 +43,11 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
       if (req.method === 'GET' && url.pathname === '/api/status') {
         // Stale = missed ~2 scheduled refreshes (at least 30 min).
         const staleAfterMs = Math.max(30, (config.headless?.intervalMin || 15) * 2.5) * 6e4;
-        return send(200, { ...buildStatus(db, new Date(), { staleAfterMs }), headless: config.headless?.enabled ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin } : null });
+        const headless = config.headless?.enabled
+          ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin }
+          : null;
+        const status = withPresentation(buildStatus(db, new Date(), { staleAfterMs }), headless, new Set(Object.keys(LOGIN_URLS)));
+        return send(200, { ...status, headless });
       }
       if (req.method === 'POST' && url.pathname === '/api/refresh') {
         if (!refresh) return send(404, 'headless refresh disabled');

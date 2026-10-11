@@ -40,3 +40,59 @@ export function buildStatus(db, now = new Date(), { staleAfterMs = DEFAULT_STALE
   const ordered = [...providers.values()].sort((a, b) => rank(a.id) - rank(b.id) || a.id.localeCompare(b.id));
   return { generatedAt: now.toISOString(), providers: ordered };
 }
+
+// ---- Presentation shared by every UI (web dashboard, menu bar panel) --------------------------------
+// Both UIs render these fields as-is, so wording and rules live in one tested place.
+
+/** "claude_max" → "Max", "pro" → "Pro" */
+export function planLabel(plan) {
+  if (!plan) return null;
+  return String(plan).replace(/^claude_/i, '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+}
+
+export function ago(iso, now = new Date()) {
+  const m = Math.round((now - Date.parse(iso)) / 6e4);
+  return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+}
+
+/**
+ * Adds `planLabel` to providers plus top-level `notices` and `resetsNext`.
+ * @param status    buildStatus() output
+ * @param headless  last headless run ({ results: { [id]: { status, message } } }) or null
+ * @param canLogIn  provider ids that have a login page (headless/login.js LOGIN_URLS)
+ */
+export function withPresentation(status, headless, canLogIn = new Set(), now = new Date()) {
+  const results = headless?.results || {};
+  const name = (id) => status.providers.find((p) => p.id === id)?.name || PROVIDER_NAMES[id] || id;
+  const reason = (r) => (r.status === 'login' ? 'needs a login' : r.message || r.status);
+  const notices = [];
+
+  // 1. Stale services (missed ~2 refreshes), with the last refresh's reason when it failed.
+  const staleIds = new Set();
+  for (const p of status.providers) {
+    const stale = p.meters.filter((m) => m.stale);
+    if (!stale.length) continue;
+    staleIds.add(p.id);
+    const oldest = stale.map((m) => m.capturedAt).sort()[0];
+    const r = results[p.id];
+    const why = r && r.status !== 'ok' ? ` · last refresh: ${reason(r)}` : '';
+    notices.push({ provider: p.id, kind: 'stale', text: `${p.name} is stale: last read ${ago(oldest, now)}${why}`, canLogIn: canLogIn.has(p.id) });
+  }
+  // 2. Refresh problems for services not already listed (skipped = e.g. app not running: no notice).
+  for (const [id, r] of Object.entries(results)) {
+    if (staleIds.has(id) || r.status === 'ok' || r.status === 'skipped') continue;
+    notices.push(r.status === 'login'
+      ? { provider: id, kind: 'login', text: `${name(id)} needs a login`, canLogIn: canLogIn.has(id) }
+      : { provider: id, kind: 'error', text: `${name(id)}: ${reason(r)}`, canLogIn: false }); // logging in won't fix a page error
+  }
+
+  // 3. Every meter with a reset time, soonest first (UIs show the first N).
+  const resetsNext = status.providers
+    .flatMap((p) => p.meters.filter((m) => m.resetsAt).map((m) => ({
+      provider: p.id, providerName: p.name, meterId: m.id, label: m.label,
+      usedPercent: m.usedPercent, resetsAt: m.resetsAt, status: m.pace.status, stale: m.stale, capturedAt: m.capturedAt,
+    })))
+    .sort((a, b) => Date.parse(a.resetsAt) - Date.parse(b.resetsAt));
+
+  return { ...status, providers: status.providers.map((p) => ({ ...p, planLabel: planLabel(p.plan) })), notices, resetsNext };
+}

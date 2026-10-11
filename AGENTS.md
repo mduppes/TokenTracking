@@ -66,6 +66,8 @@ await page.close(); await conn.close();
 3. Add a display name to `PROVIDER_NAMES` in `server/src/status.js` and to `PROVIDER_LABEL` in `server/public/app.js`.
 4. Add the login URL in `scripts/browser-login.js`, and a row in `docs/PROVIDERS.md`.
 
+**Change notices, "Resets next" or labels.** Edit `withPresentation()` in `server/src/status.js` (+ `test/presentation.test.js`). Both UIs render its output; don't re-derive it in `app.js` or Swift.
+
 **Change the meter shape or DB.**
 1. Update `makeMeter` (`lib/parse.js`), `db.js` and the "Data model" section of ARCHITECTURE.md.
 2. For the DB, bump `meta.schema_version` and migrate in `openDb`.

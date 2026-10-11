@@ -3,6 +3,8 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+- **One source for presentation:** `/api/status` now includes `notices`, `resetsNext` and `providers[].planLabel` (`withPresentation` in `status.js`, unit-tested). The web dashboard and the menu bar panel both render them as-is instead of each re-deriving them, so they can't drift apart.
 ### Added
 - **Log in button** on stale and needs-login notices (dashboard and menu bar panel). It opens the TokenTracking browser on that service (`POST /api/login`), and that service refreshes automatically when you quit the window. Partial refreshes merge into the last results.
 ### Fixed
