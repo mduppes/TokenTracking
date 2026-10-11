@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { launchChrome, openPage, profileInUse, browserIdentity } from './chrome.js';
 import { execFileSync } from 'node:child_process';
-import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, MUSE_OPEN_STEPS } from '../../../lib/providers.js';
+import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, parseMuseLimitNotice, MUSE_OPEN_STEPS } from '../../../lib/providers.js';
 import { normalizeDomMeters } from '../../../lib/parse.js';
 import { readAntigravity } from '../local/antigravity.js';
 
@@ -76,12 +76,27 @@ export const TASKS = [
     url: 'https://muse.ai/',
     loggedOut: (href, text) => !/(^|\.)muse\.ai$/.test(new URL(href).hostname) || /Log in or create an account/i.test(text),
     async read(page) {
-      const r = await readDom(page, MUSE_OPEN_STEPS);
-      if (!r.error) return r;
-      // Seen 2026-10-11: still logged in, but the agent stays "Connecting…" and Settings has no Usage
-      // section. A fresh login fixes it, so report it as a login problem (the dashboard offers "Log in").
-      const stuck = await page.evaluate('/Connecting…|Connecting\\.\\.\\.|Connect to manage/.test(document.body.innerText)').catch(() => false);
-      return stuck ? { login: true, message: 'session expired (stuck on "Connecting…"): log in again' } : r;
+      // Muse's Usage section (Settings → General) only renders once its agent has connected, which can
+      // take minutes, and may not happen at all while you're out of tokens (seen 2026-10-11). So:
+      // 1. wait for the app shell, 2. wait for "Connecting…" to clear, 3. read the usage bar;
+      // if it never connects, fall back to the "You've reached your usage limit … reset at …" notice.
+      const has = (js) => page.evaluate(js).catch(() => false);
+      const shell = 'document.querySelector(\'button[data-testid="hatch-dock-more"]\') !== null';
+      const connecting = '/Connecting…|Connecting\\.\\.\\./.test(document.body.innerText)';
+      for (let t = Date.now(); Date.now() - t < 20_000 && !(await has(shell)); ) await sleep(1000);
+      await sleep(3000); // give "Connecting…" a moment to appear
+      for (let t = Date.now(); Date.now() - t < 120_000 && await has(connecting); ) await sleep(2000);
+      if (!(await has(connecting))) {
+        const r = await readDom(page, MUSE_OPEN_STEPS);
+        if (!r.error && r.meters.length) {
+          // Stable id: the bar's label is the plan name ("Free plan"), which changes with the plan.
+          const [m] = r.meters;
+          return { meters: [{ ...m, id: 'weekly', label: 'Weekly limit', window: 'weekly' }], plan: m.label, source: r.source };
+        }
+      }
+      const notice = parseMuseLimitNotice(await page.evaluate('document.body.innerText').catch(() => ''));
+      if (notice) return { meters: [notice], source: 'headless:limit-notice' };
+      return { error: 'Muse is still connecting after 2 min; will retry next refresh (if it persists, use Log in)' };
     },
   },
 ];

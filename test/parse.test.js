@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseResetText, classifyWindow, extractMeters, makeMeter } from '../lib/parse.js';
-import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, parseAntigravityStatus } from '../lib/providers.js';
+import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, parseAntigravityStatus, parseMuseLimitNotice } from '../lib/providers.js';
 
 // Fixed "now": Saturday 2026-10-10 12:00 local time
 const NOW = new Date(2026, 9, 10, 12, 0, 0);
@@ -122,4 +122,14 @@ test('Antigravity GetUserStatus: models grouped into quota pools (redacted real 
     ['pool-claude-gpt-oss', 'Claude + GPT-OSS models', 'weekly', 51.04],
     ['pool-gemini', 'Gemini models', 'session', 0],
   ]);
+});
+
+test('Muse limit notice → 100% weekly meter with reset time', () => {
+  const now = new Date(2026, 9, 11, 8, 0);
+  const m = parseMuseLimitNotice('…\nYou\'ve reached your usage limit. Upgrade now or invite friends to get more Muse tokens. Your full weekly usage will reset at 1:36 AM on Wednesday, October 14.\nMessage', now);
+  assert.equal(m.usedPercent, 100);
+  assert.equal(m.window, 'weekly');
+  const d = new Date(m.resetsAt);
+  assert.deepEqual([d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()], [9, 14, 1, 36]);
+  assert.equal(parseMuseLimitNotice('nothing here'), null);
 });

@@ -7,7 +7,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - **Log in button** on stale and needs-login notices (dashboard and menu bar panel). It opens the TokenTracking browser on that service (`POST /api/login`), and that service refreshes automatically when you quit the window. Partial refreshes merge into the last results.
 ### Fixed
 - **Blank menu bar panel** after the Mac slept: the panel now loads fresh every time it opens, and reloads itself if WebKit's page process dies or a load fails.
-- **Muse** with an expired agent session ("Connecting…", no Usage section) is reported as "needs a login" instead of "no usage found".
+- **Muse** went stale while its agent was slow to connect ("Connecting…", no Usage section yet; worst when out of tokens). The refresh now waits for the page, then up to 2 min for the connection, and otherwise reads the "You've reached your usage limit … reset at …" notice (100% + reset time). The Muse meter is now `weekly` / "Weekly limit", with the plan shown separately.
+- Dashboard **favicon** (the app icon; `npm run build:icon` also writes `server/public/favicon.png`).
 ### Changed
 - Consistent service order everywhere: Claude, Cursor, Antigravity, (Grok Bot), Muse, Gemini. The menu bar shows Claude ✳, Cursor ➚, Antigravity ⇧, Grok Bot ✕, Muse Ⓜ; Gemini is dashboard-only.
 ### Fixed

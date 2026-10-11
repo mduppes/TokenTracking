@@ -1,4 +1,5 @@
-// Renders assets/icon.svg into menubar/AppIcon.icns (all macOS sizes) and docs/images/icon.png,
+// Renders assets/icon.svg into menubar/AppIcon.icns (all macOS sizes), docs/images/icon.png and the
+// dashboard favicon (server/public/favicon.png),
 // using headless Chrome for rasterizing and macOS `iconutil` for packaging. Usage: npm run build:icon
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -31,9 +32,10 @@ for (const pt of [16, 32, 128, 256, 512]) {
 }
 mkdirSync('docs/images', { recursive: true });
 writeFileSync('docs/images/icon.png', await render(256));
+writeFileSync('server/public/favicon.png', await render(64)); // dashboard tab icon
 await page.close();
 await conn.close();
 
 execFileSync('iconutil', ['-c', 'icns', iconset, '-o', 'menubar/AppIcon.icns']);
 rmSync(work, { recursive: true, force: true });
-console.log('Wrote menubar/AppIcon.icns and docs/images/icon.png');
+console.log('Wrote menubar/AppIcon.icns, docs/images/icon.png and server/public/favicon.png');

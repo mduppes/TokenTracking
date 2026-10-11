@@ -8,7 +8,7 @@ import { openLoginWindow, LOGIN_URLS } from './headless/login.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_BODY = 16 * 1024;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 export function createApp({ db, config, refresh = null, schedule = null }) {
   const allowedHosts = new Set([`127.0.0.1:${config.port}`, `localhost:${config.port}`]);
