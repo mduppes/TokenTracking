@@ -65,6 +65,13 @@ test('rejects other origins (incl. extensions) and foreign hosts', async () => {
   assert.equal(refreshCalls, 1);
 });
 
+test('login endpoint: validates provider and origin', async () => {
+  const json = { 'content-type': 'application/json' };
+  assert.equal((await call('POST', '/api/login', { body: { provider: 'nope' }, headers: json })).status, 400);
+  assert.equal((await call('POST', '/api/login', { body: { provider: '../x' }, headers: json })).status, 400);
+  assert.equal((await call('POST', '/api/login', { body: { provider: 'muse' }, headers: { ...json, origin: 'https://evil.example' } })).status, 403);
+});
+
 test('serves dashboard, blocks traversal', async () => {
   const r = await call('GET', '/');
   assert.equal(r.status, 200);

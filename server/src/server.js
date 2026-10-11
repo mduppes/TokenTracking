@@ -4,6 +4,7 @@ import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildStatus } from './status.js';
 import { lastHeadlessRun } from './headless/refresh.js';
+import { openLoginWindow, LOGIN_URLS } from './headless/login.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_BODY = 16 * 1024;
@@ -49,6 +50,14 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
         await readJson(req); // enforces JSON content-type (forces a CORS preflight for cross-site callers)
         const run = await refresh();
         return send(200, run || { error: 'refresh failed' });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/login') {
+        // Opens a visible login window for one provider; refreshes that provider once it's closed.
+        const body = await readJson(req);
+        const provider = typeof body?.provider === 'string' && Object.hasOwn(LOGIN_URLS, body.provider) ? body.provider : null;
+        if (!provider) return send(400, 'unknown provider');
+        const r = openLoginWindow(config, [provider], () => refresh?.([provider]));
+        return send(r.ok ? 200 : 409, r);
       }
       if (req.method === 'GET' && !url.pathname.startsWith('/api/')) return serveStatic(url.pathname, send);
       return send(404, 'not found');

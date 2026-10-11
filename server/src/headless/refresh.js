@@ -75,7 +75,14 @@ export const TASKS = [
     id: 'muse',
     url: 'https://muse.ai/',
     loggedOut: (href, text) => !/(^|\.)muse\.ai$/.test(new URL(href).hostname) || /Log in or create an account/i.test(text),
-    read: (page) => readDom(page, MUSE_OPEN_STEPS),
+    async read(page) {
+      const r = await readDom(page, MUSE_OPEN_STEPS);
+      if (!r.error) return r;
+      // Seen 2026-10-11: still logged in, but the agent stays "Connecting…" and Settings has no Usage
+      // section. A fresh login fixes it, so report it as a login problem (the dashboard offers "Log in").
+      const stuck = await page.evaluate('/Connecting…|Connecting\\.\\.\\.|Connect to manage/.test(document.body.innerText)').catch(() => false);
+      return stuck ? { login: true, message: 'session expired (stuck on "Connecting…"): log in again' } : r;
+    },
   },
 ];
 
@@ -101,6 +108,8 @@ let running = null;
  * Run one headless refresh. Returns { at, results: { [providerId]: { status, message?, meters? } } }.
  * status: ok | login (needs `npm run browser-login`) | error | skipped
  */
+export const isRefreshing = () => running !== null;
+
 export function runHeadlessRefresh(opts) {
   running ??= doRun(opts).finally(() => { running = null; });
   return running;
@@ -126,15 +135,15 @@ async function doRun({ db, config, only = null, log = () => {} }) {
     results.antigravity.ms = Date.now() - started;
     log(`antigravity: ${results.antigravity.status}${results.antigravity.message ? ` (${results.antigravity.message})` : ''}`);
   }
-  if (!tasks.length) return save(config, { at, results });
+  if (!tasks.length) return save(config, { at, results }, only);
 
   if (!existsSync(config.headless.profileDir)) {
     for (const t of tasks) results[t.id] = { status: 'login', message: 'no browser profile yet: run `npm run browser-login`' };
-    return save(config, { at, results });
+    return save(config, { at, results }, only);
   }
   if (profileInUse(config.headless.profileDir)) {
     for (const t of tasks) results[t.id] = { status: 'skipped', message: 'browser-login window is still open' };
-    return save(config, { at, results });
+    return save(config, { at, results }, only);
   }
 
   const conn = await launchChrome({ chromePath: config.headless.chromePath, profileDir: config.headless.profileDir });
@@ -148,7 +157,7 @@ async function doRun({ db, config, only = null, log = () => {} }) {
         await sleep(2500);
         const { href, text } = await page.evaluate(`({ href: location.href, text: document.body?.innerText.slice(0, 2000) || '' })`);
         const r = t.loggedOut(href, text) ? { login: true } : await t.read(page);
-        if (r.login) results[t.id] = { status: 'login', message: 'logged out: run `npm run browser-login`' };
+        if (r.login) results[t.id] = { status: 'login', message: r.message || 'logged out: log in again' };
         else if (r.error) results[t.id] = { status: 'error', message: r.error };
         else {
           const snap = { capturedAt: new Date().toISOString(), source: r.source, plan: r.plan || null };
@@ -166,10 +175,15 @@ async function doRun({ db, config, only = null, log = () => {} }) {
   } finally {
     await conn.close();
   }
-  return save(config, { at, results });
+  return save(config, { at, results }, only);
 }
 
-async function save(config, run) {
+/** Persist the run. A partial run (`only`) merges into the previous results so other providers keep their status. */
+async function save(config, run, only = null) {
+  if (only) {
+    const prev = await lastHeadlessRun(config);
+    run = { at: run.at, results: { ...(prev?.results || {}), ...run.results } };
+  }
   await writeFile(config.headless.statusPath, JSON.stringify(run, null, 2), { mode: 0o600 }).catch(() => {});
   return run;
 }

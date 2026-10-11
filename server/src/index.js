@@ -6,14 +6,14 @@ import { runHeadlessRefresh } from './headless/refresh.js';
 const config = loadConfig();
 const db = openDb(config.dbPath);
 const log = (l) => console.log(`[headless ${new Date().toLocaleTimeString()}] ${l}`);
-const refresh = () => runHeadlessRefresh({ db, config, log }).catch((e) => log(`failed: ${e.message}`));
+const refresh = (only = null) => runHeadlessRefresh({ db, config, log, only }).catch((e) => log(`failed: ${e.message}`));
 // Headless refresh: Chrome only runs during a refresh, then quits (ADR-009).
 // `schedule.nextAt` is shown on the dashboard ("next refresh in …").
 const schedule = { nextAt: null };
 let timer = null;
 const tick = async () => {
   schedule.nextAt = null;
-  await refresh();
+  await refresh(null);
   schedule.nextAt = new Date(Date.now() + config.headless.intervalMin * 6e4).toISOString();
   timer = setTimeout(tick, config.headless.intervalMin * 6e4);
 };

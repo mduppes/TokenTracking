@@ -38,6 +38,7 @@ File permissions: the data dir and profile are created `0700`; the DB and status
 - Binds to **127.0.0.1 only**.
 - **DNS-rebinding guard.** Requests whose `Host` header isn't `127.0.0.1:<port>` or `localhost:<port>` are rejected (403).
 - **Origin check.** Requests carrying an `Origin` header must come from the dashboard itself (`http://127.0.0.1:<port>`). Any other website or browser extension gets 403, so web pages can't read your usage or trigger refreshes. Non-browser clients (the menu bar app, `curl`) send no Origin and are allowed, since they already run as you.
+- **Login trigger.** `POST /api/login` only accepts a known provider id and only opens that provider's fixed login URL in the TokenTracking browser. It sits behind the same Host/Origin gate as everything else.
 - **Refresh trigger.** `POST /api/refresh` requires `application/json` (≤ 16 KB), which forces a CORS preflight for any cross-site attempt.
 - **Static files** are served only from `server/public/`, with path traversal blocked. The dashboard has a CSP of `default-src 'self'` and loads nothing from CDNs.
 - SQL uses prepared statements only.

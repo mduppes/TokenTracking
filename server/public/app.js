@@ -114,6 +114,9 @@ function drawSpark(svg, m) {
   svg.onpointerleave = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
 }
 
+/** Providers that use the TokenTracking browser profile (POST /api/login opens a login window). */
+const LOGIN_PROVIDERS = new Set(['claude', 'cursor', 'gemini', 'muse']);
+
 const PROVIDER_LABEL = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse', antigravity: 'Antigravity' };
 
 /** "claude_max" → "Max", "pro" → "Pro" */
@@ -128,6 +131,7 @@ function renderNotices() {
     return n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n[0];
   };
   const reason = (r) => (r.status === 'login' ? 'needs a login' : r.message || r.status);
+  const loginBtn = (id) => (LOGIN_PROVIDERS.has(id) ? ` <button type="button" class="login-btn" data-provider="${esc(id)}">Log in</button>` : '');
 
   // 1. Stale services: readings older than ~2 missed refreshes, with the last refresh's reason.
   const stale = data.providers.filter((p) => p.meters.some((m) => m.stale));
@@ -136,7 +140,7 @@ function renderNotices() {
     const oldest = p.meters.filter((m) => m.stale).map((m) => m.capturedAt).sort()[0];
     const r = results[p.id];
     const why = r && r.status !== 'ok' ? ` · last refresh: ${esc(reason(r))}` : '';
-    return `<div class="notice"><span class="dot s-unknown"></span><span>${names([p.id])} is stale: last read ${ago(oldest)}${why}</span></div>`;
+    return `<div class="notice"><span class="dot s-unknown"></span><span>${names([p.id])} is stale: last read ${ago(oldest)}${why}</span>${loginBtn(p.id)}</div>`;
   });
 
   // 2. Refresh problems for services that aren't already listed as stale.
@@ -146,7 +150,7 @@ function renderNotices() {
   const when = h.at ? ` <span class="muted">(last refresh ${ago(h.at)})</span>` : '';
   $('#notices').innerHTML = [
     ...staleNotes,
-    login.length ? `<div class="notice"><span class="dot s-limited"></span><span>${names(login)} ${login.length > 1 ? 'need' : 'needs'} a login. Run <code>npm run browser-login</code>${when}</span></div>` : '',
+    ...login.map((id) => `<div class="notice"><span class="dot s-limited"></span><span>${names([id])} needs a login${when}</span>${loginBtn(id)}</div>`),
     ...other.map(([id, r]) => `<div class="notice"><span class="dot s-over-pace"></span><span>${names([id])}: ${esc(reason(r))}${when}</span></div>`),
   ].join('');
 }
@@ -197,6 +201,18 @@ $('#refreshBtn').onclick = async () => {
   b.disabled = false; b.textContent = 'Refresh now';
   load();
 };
+// "Log in" buttons in notices: open the TokenTracking browser on that provider's login page.
+$('#notices').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.login-btn');
+  if (!btn) return;
+  btn.disabled = true;
+  const res = await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: btn.dataset.provider }) }).catch(() => null);
+  const r = res ? await res.json().catch(() => ({})) : { reason: 'service unreachable' };
+  btn.replaceWith(Object.assign(document.createElement('span'), {
+    className: 'login-hint',
+    textContent: r.ok ? 'Login window opened: log in, then quit it (⌘Q). It refreshes automatically.' : r.reason || 'Could not open the login window.',
+  }));
+});
 $('#viewToggle').onclick = () => { tableView = !tableView; render(); };
 addEventListener('resize', () => render());
 load();

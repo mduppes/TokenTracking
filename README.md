@@ -42,7 +42,7 @@ No API keys, no accounts, no cloud, no browser extension.
   - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
   - **Lifecycle:** it starts and stops everything it needs.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
-- **Stale and login notices.** Services whose data is stale (missed about 2 refreshes) are listed at the top with the reason, and an expired login tells you to run `npm run browser-login`.
+- **Stale and login notices with a Log in button.** Services whose data is stale (missed about 2 refreshes) or whose login expired are listed at the top with the reason. **Log in** opens the TokenTracking browser on that service; quit it (⌘Q) when you're done and that service refreshes automatically.
 
 ## Quick start
 

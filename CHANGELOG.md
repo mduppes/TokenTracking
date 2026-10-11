@@ -3,6 +3,11 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **Log in button** on stale and needs-login notices (dashboard and menu bar panel). It opens the TokenTracking browser on that service (`POST /api/login`), and that service refreshes automatically when you quit the window. Partial refreshes merge into the last results.
+### Fixed
+- **Blank menu bar panel** after the Mac slept: the panel now loads fresh every time it opens, and reloads itself if WebKit's page process dies or a load fails.
+- **Muse** with an expired agent session ("Connecting…", no Usage section) is reported as "needs a login" instead of "no usage found".
 ### Changed
 - Consistent service order everywhere: Claude, Cursor, Antigravity, (Grok Bot), Muse, Gemini. The menu bar shows Claude ✳, Cursor ➚, Antigravity ⇧, Grok Bot ✕, Muse Ⓜ; Gemini is dashboard-only.
 ### Fixed

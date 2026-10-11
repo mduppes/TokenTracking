@@ -244,12 +244,23 @@ final class StatusModel: ObservableObject {
     @Published var refreshing = false
     @Published var menuBarHidden = false
 
+    private let panelURL = URL(string: "/?compact", relativeTo: baseURL)!
+    private let webGuard = WebGuard()
+
     lazy var webView: WKWebView = {
         let w = WKWebView()
         w.setValue(false, forKey: "drawsBackground")
-        w.load(URLRequest(url: URL(string: "/?compact", relativeTo: baseURL)!))
+        w.navigationDelegate = webGuard
+        webGuard.reload = { [weak self] in self?.loadPanel() }
+        w.load(URLRequest(url: panelURL))
         return w
     }()
+
+    /// Always a fresh load, not reload(): after sleep the page's web process can be gone (blank panel),
+    /// or the first load may have failed before the service was up. Either way reload() has nothing to reload.
+    func loadPanel() {
+        webView.load(URLRequest(url: panelURL, cachePolicy: .reloadIgnoringLocalCacheData))
+    }
 
     private var timer: Timer?
 
@@ -257,7 +268,7 @@ final class StatusModel: ObservableObject {
         Task { @MainActor in
             await ServiceRunner.shared.ensureRunning()
             self.poll()
-            self.webView.reload()
+            self.loadPanel()
         }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
@@ -316,7 +327,7 @@ final class StatusModel: ObservableObject {
 
     func panelOpened() {
         poll()
-        if reachable { webView.reload() }
+        loadPanel()
     }
 
     func refreshNow() async {
@@ -329,11 +340,25 @@ final class StatusModel: ObservableObject {
         _ = try? await URLSession.shared.data(for: req)
         refreshing = false
         poll()
-        webView.reload()
+        loadPanel()
     }
 }
 
 // MARK: - Panel
+
+/// Keeps the panel's web view alive: if WebKit's content process dies (e.g. memory pressure during sleep)
+/// or a load fails (service restarting), load the page again instead of staying blank.
+final class WebGuard: NSObject, WKNavigationDelegate {
+    var reload: (() -> Void)?
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { reload?() }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { retry(error) }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { retry(error) }
+    private func retry(_ error: Error) {
+        // A newer load cancels the previous one; that's not a failure (retrying would loop forever).
+        if (error as NSError).code == NSURLErrorCancelled { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.reload?() }
+    }
+}
 
 struct WebView: NSViewRepresentable {
     let webView: WKWebView

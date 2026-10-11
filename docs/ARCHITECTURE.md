@@ -51,6 +51,8 @@ Flow per run:
 5. Store the snapshots and close the page.
 6. Quit Chrome (SIGKILL after 5 s if it lingers).
 
+`POST /api/login {provider}` (dashboard **Log in** buttons) opens a visible Chrome window on the profile with that provider's login URL (`headless/login.js`, shared with `npm run browser-login`). When that Chrome process exits, it runs a refresh for just that provider. Partial runs merge into `headless-status.json`, so other providers keep their status.
+
 Scheduling lives in `index.js` (first run 10 s after start, then every N minutes). The dashboard's **Refresh now** calls `POST /api/refresh`. `GET /api/status` includes `headless` (the last run), and the dashboard shows a notice for each provider that isn't `ok`.
 
 ### Menu bar app (`menubar/TokenTrackingMenu.swift`)
@@ -59,6 +61,7 @@ An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with
 - **Title:** polls `GET /api/status` every 60 s. `MenuBarGlyphs` draws one SF Symbol plus two characters per service (the % used by its worst meter, 0–99; `––` at the limit) into a single template image. Grok Bot is split out of Cursor by meter id. The tooltip lists per-service values plus the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %). With no data, it shows a gauge symbol.
 - **Panel:** a `WKWebView` of `/?compact` (the dashboard's single-column mode), with Refresh now (`POST /api/refresh`), Open dashboard and Quit.
 - **Service down:** if the service is unreachable, the panel says so.
+- **Panel resilience:** the panel's `WKWebView` gets a fresh `load()` every time it opens (not `reload()`). A `WebGuard` navigation delegate reloads it if WebKit's content process dies (seen after overnight sleep: a blank panel) and retries failed loads every 3 s, ignoring cancellations.
 - **Hidden-icon fallback:** every 3 s the app checks whether the status item's window is visible. It's hidden if the app isn't allowed in System Settings → Menu Bar (new bundles start disallowed on macOS 26; seen 2026-10-10) or the bar is full. While hidden, the app switches to a regular activation policy (Dock icon) and shows the panel in a window, with a banner and a button to the Menu Bar settings. When the item becomes visible, it closes the window and goes back to menu-bar-only. Clicking the Dock icon reopens the window. On macOS 26, status item windows are owned by "Control Center" in `CGWindowList`.
 - **Owns the service:** `ServiceRunner` checks `/api/health` on launch and on every poll. If the service is down, it starts `node server/src/index.js` as a child process, with stdout/stderr going to `~/.tokentracking/service.log`. It terminates the child on quit, and passes `TOKENTRACKING_PARENT_PID` so the service exits by itself within about 3 s if the app dies without cleaning up (force quit, crash). It never stops a service it didn't start, e.g. a manual `npm start`. The project and Node paths come from `BuildConfig.swift`, which the build script generates.
 - **Signing:** `build-menubar.sh` signs with the "TokenTracking Local Signing" identity when it exists, else ad-hoc. Bundle id `io.github.mduppes.tokentracking`. macOS ties "Allow in the Menu Bar" to the signing identity: with ad-hoc signing every rebuild is a new identity, and the menu bar entry goes stale (icon hidden even though the toggle is on). Seen on macOS 26, 2026-10-10.

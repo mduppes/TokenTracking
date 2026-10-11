@@ -66,6 +66,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
   - The menu opens on **pointerdown**, so a full pointer/mouse press is dispatched (not `el.click()`).
   - The item's text is "Settings\n⌘,", so text matching uses the **first line**.
 - The meter label is the plan name, so it gets a new meter id if you change plans.
+- **Expired agent session (2026-10-11):** the page still looks logged in, but the agent shows "Connecting…" and Settings → General has no Usage section. The task reports this as `login` ("stuck on Connecting…"), and a fresh login via the **Log in** button fixes it.
 
 ### Antigravity
 - **Process.** `…/Antigravity.app/Contents/Resources/bin/language_server --standalone --override_ide_name antigravity --subclient_type hub --https_server_port 0 --csrf_token <token> …` (app 2.22.0). The port is random, so it's found with `lsof`. It listens on two ports; the first answers HTTPS.
