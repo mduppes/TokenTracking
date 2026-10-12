@@ -79,6 +79,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
   - body: `{"metadata":{"ideName":"antigravity","extensionName":"antigravity","locale":"en"}}`
 - **Response.** `userStatus.cascadeModelConfigData.clientModelConfigs[]` = `{ label, modelOrAlias.model, quotaInfo: { remainingFraction (0–1), resetTime } }`, plus `userStatus.planStatus.planInfo.planName`. Models in the same pool report identical values.
   - Observed pools: Claude Opus/Sonnet + GPT-OSS share a weekly pool; all Gemini models share a ~5h pool.
+- **Exhausted pool (2026-10-12):** when a pool is fully used, `quotaInfo` has only `resetTime`; `remainingFraction` is omitted (zero values are left out of the JSON). The parser treats that as 0% remaining, i.e. 100% used. Models with no `quotaInfo` fields at all are ignored.
 - **Window guess:** `session` if the reset is ≤6h away, `daily` if ≤26h, else `weekly`.
 - **"Antigravity IDE".** A separate app with no language server of its own was also running; only the "Antigravity" app's server is used.
 

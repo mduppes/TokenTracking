@@ -133,3 +133,17 @@ test('Muse limit notice → 100% weekly meter with reset time', () => {
   assert.deepEqual([d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()], [9, 14, 1, 36]);
   assert.equal(parseMuseLimitNotice('nothing here'), null);
 });
+
+test('Antigravity: an exhausted pool omits remainingFraction (real shape, 2026-10-12) and counts as 100% used', () => {
+  const now = new Date('2026-10-12T12:00:00Z');
+  const { meters } = parseAntigravityStatus({ userStatus: { cascadeModelConfigData: { clientModelConfigs: [
+    { label: 'Claude Opus 5.5 (High)', quotaInfo: { resetTime: '2026-10-15T17:42:53Z' } },
+    { label: 'GPT-OSS 120B (Medium)', quotaInfo: { resetTime: '2026-10-15T17:42:53Z' } },
+    { label: 'Gemini 3.1 Pro (Low)', quotaInfo: { remainingFraction: 1, resetTime: '2026-10-13T01:58:30Z' } },
+    { label: 'No quota at all', quotaInfo: {} },
+  ] } } }, now);
+  assert.deepEqual(meters.map((m) => [m.id, m.usedPercent, m.resetsAt]), [
+    ['pool-claude-gpt-oss', 100, '2026-10-15T17:42:53.000Z'],
+    ['pool-gemini', 0, '2026-10-13T01:58:30.000Z'],
+  ]);
+});
