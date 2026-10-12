@@ -3,6 +3,8 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.
 ### Changed
 - **One source for presentation:** `/api/status` now includes `notices`, `resetsNext` and `providers[].planLabel` (`withPresentation` in `status.js`, unit-tested). The web dashboard and the menu bar panel both render them as-is instead of each re-deriving them, so they can't drift apart.
 ### Added
