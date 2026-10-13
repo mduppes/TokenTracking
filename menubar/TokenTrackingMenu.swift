@@ -168,10 +168,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 // MARK: - Menu bar glyphs
 
-/// One service in the menu bar: a brand icon and two characters for its highest usage meter.
+/// One service in the menu bar: a brand icon and usage indicator for its highest usage meter.
 struct MenuSlot: Equatable {
     let symbol: String
-    let text: String   // "0"…"99" = % used, "––" = at the limit, "??" = no reading
+    let text: String   // "0"…"99" = % used, "↻2h" = reset countdown at limit, "MAX" = limit without reset time, "??" = no reading
 }
 
 enum MenuBarGlyphs {
@@ -187,10 +187,22 @@ enum MenuBarGlyphs {
         ("gemini", "gemini", "Gemini", { p, _ in p == "gemini" }),
     ]
 
-    /// Two characters: % used 0–99 (single digits padded with a trailing figure space so the width is
-    /// stable), "––" at/over the limit.
-    static func digits(_ pct: Double) -> String {
-        if pct >= 100 { return "––" }
+    /// Usage indicator: % used 0–99 (single digits padded with a trailing figure space so the width is
+    /// stable), "↻2h"/"↻45m" reset countdown when at/over the limit, or "MAX" if reset time is unknown.
+    static func digits(_ pct: Double, resetsAt: String? = nil) -> String {
+        if pct >= 100 {
+            if let resetsAt, let date = parseDate(resetsAt) {
+                let left = date.timeIntervalSinceNow
+                if left <= 0 { return "↻0m" }
+                let m = Int(left / 60)
+                if m < 60 { return "↻\(max(1, m))m" }
+                let h = Int(round(Double(m) / 60.0))
+                if h < 24 { return "↻\(max(1, h))h" }
+                let d = Int(round(Double(m) / 1440.0))
+                return "↻\(max(1, d))d"
+            }
+            return "MAX"
+        }
         let n = min(99, max(0, Int(pct)))
         return n < 10 ? "\(n)\u{2007}" : String(n) // pad after, so the digit stays next to its icon
     }
@@ -436,8 +448,12 @@ final class StatusModel: ObservableObject {
                 return MenuSlot(symbol: svc.symbol, text: "??")
             }
             let stale = ms.contains { $0.stale } ? " · stale" : ""
-            lines.append("\(svc.name): \(Int(worst.1.rounded()))% (\(worst.0.label))\(stale)")
-            return MenuSlot(symbol: svc.symbol, text: MenuBarGlyphs.digits(worst.1))
+            if worst.1 >= 100, let resetsAt = worst.0.resetsAt, let d = parseDate(resetsAt), d.timeIntervalSinceNow > 0 {
+                lines.append("\(svc.name): 100% (\(worst.0.label)) · resets in \(shortDuration(d.timeIntervalSinceNow))\(stale)")
+            } else {
+                lines.append("\(svc.name): \(Int(worst.1.rounded()))% (\(worst.0.label))\(stale)")
+            }
+            return MenuSlot(symbol: svc.symbol, text: MenuBarGlyphs.digits(worst.1, resetsAt: worst.0.resetsAt))
         }
         tooltip = lines.isEmpty ? "TokenTracking" : lines.joined(separator: "\n")
         return lines

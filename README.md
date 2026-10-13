@@ -38,7 +38,7 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
 - **Menu bar app:**
-  - **Usage slots:** a brand icon and percentage per selected service; `––` means at the limit and `??` means no reading or an unavailable selected meter.
+  - **Usage slots:** a brand icon and percentage per selected service; at the limit it shows a reset countdown (e.g. `↻2h`, `↻45m`) or `MAX`, and `??` means no reading or an unavailable selected meter.
   - **Native panel:** click for notices, upcoming resets and every meter, with Refresh now / Open dashboard / Quit.
   - **Settings:** the top-right gear becomes an X to return. Show/hide services (including Gemini), drag whole rows with live reordering, use accessible arrow buttons, and choose a specific meter or **Highest usage**. Preferences save locally; Restore defaults resets them. Hiding all services leaves a clickable app icon.
   - **Lifecycle:** the app starts and stops the local service it owns.
@@ -95,7 +95,7 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 - **What it shows:** one icon and two usage characters per selected service.
   - **Defaults:** Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse. Gemini is available in Settings and hidden by default.
   - **The number:** the highest usage percentage among that service’s meters, or the specific meter selected in Settings. Cursor excludes Grok Bot, which has its own slot.
-  - **States:** 0–99 = % used; `––` = at/over the limit; `??` = no reading or selected meter unavailable. Selected slots stay in place while data loads.
+  - **States:** 0–99 = % used; `↻2h`/`↻45m` (or `MAX`) = at/over the limit with reset countdown; `??` = no reading or selected meter unavailable. Selected slots stay in place while data loads.
   - **Hover** for meter names and the most at-risk reading across all services. Click for the native usage panel; the top-right gear opens Settings.
   - **Preferences** persist locally across restarts. Hiding a slot does not stop collection or hide dashboard cards.
 

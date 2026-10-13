@@ -22,6 +22,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - OpenAI guest pages saying **Log in** now count as logged out, so they offer a login notice rather than a generic scraping error.
 - **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.
 ### Changed
+- Replaced the confusing `––` menu bar limit indicator with an intuitive reset countdown (e.g. `↻2h`, `↻45m`, `↻1d`) showing when the quota frees up, falling back to `MAX` when reset time is unknown. Tooltip also details the remaining reset duration when limited.
 - **One source for presentation:** `/api/status` now includes `notices`, `resetsNext` and `providers[].planLabel` (`withPresentation` in `status.js`, unit-tested). The web dashboard and the menu bar panel both render them as-is instead of each re-deriving them, so they can't drift apart.
 ### Added
 - **Log in button** on stale and needs-login notices (dashboard and menu bar panel). It opens the TokenTracking browser on that service (`POST /api/login`), and that service refreshes automatically when you quit the window. Partial refreshes merge into the last results.
