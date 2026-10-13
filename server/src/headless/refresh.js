@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { parseClaudeUsage, parseCursorUsage, parseCursorGrokBot, parseMuseLimitNotice, MUSE_OPEN_STEPS } from '../../../lib/providers.js';
 import { normalizeDomMeters } from '../../../lib/parse.js';
 import { readAntigravity } from '../local/antigravity.js';
+import { openAILoggedOut, readOpenAIUsage } from './openai.js';
 
 const SCRAPER_PATH = fileURLToPath(new URL('../../../lib/scrape-dom.js', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,12 +75,11 @@ export const TASKS = [
   {
     id: 'openai',
     url: 'https://chatgpt.com/settings/usage?tab=overview',
-    loggedOut: (href, text) => !/(^|\.)chatgpt\.com$/.test(new URL(href).hostname)
-      || /\/auth\/login|\/login|\/auth\/logout/.test(new URL(href).pathname)
-      || (/\b(?:log|sign)\s*in\b/i.test(text) && !/usage/i.test(text)),
+    loggedOut: openAILoggedOut,
+    handlesLogin: true,
     // The usage page is read from its rendered UI. Keep this on the dedicated Chrome profile so
     // ChatGPT's subscription session never leaves the browser boundary.
-    read: (page) => readDom(page),
+    read: readOpenAIUsage,
   },
   {
     id: 'muse',
@@ -181,7 +181,7 @@ async function doRun({ db, config, only = null, log = () => {} }) {
         await page.goto(t.url).catch(() => {}); // SPAs may never fire load cleanly; we check the URL next
         await sleep(2500);
         const { href, text } = await page.evaluate(`({ href: location.href, text: document.body?.innerText.slice(0, 2000) || '' })`);
-        const r = t.loggedOut(href, text) ? { login: true } : await t.read(page);
+        const r = !t.handlesLogin && t.loggedOut(href, text) ? { login: true } : await t.read(page);
         if (r.login) results[t.id] = { status: 'login', message: r.message || 'logged out: log in again' };
         else if (r.error) results[t.id] = { status: 'error', message: r.error };
         else {

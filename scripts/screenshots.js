@@ -1,5 +1,6 @@
 // Regenerates the README screenshots in docs/images/ from demo data (never real usage):
-// dashboard (light + dark), the menu bar panel, and the menu bar glyphs. Usage: npm run screenshots
+// dashboard (light + dark), compact web panel and menu bar glyphs; builds a native demo
+// preview for separate panel/Settings capture. Usage: npm run screenshots
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -46,7 +47,9 @@ async function shot(file, { path, width, height, scheme, fullPage = false }) {
 }
 await shot('dashboard-light.png', { path: '/', width: 1200, height: 900, scheme: 'light', fullPage: true });
 await shot('dashboard-dark.png', { path: '/', width: 1200, height: 900, scheme: 'dark', fullPage: true });
-await shot('panel-dark.png', { path: '/?compact', width: 400, height: 560, scheme: 'dark' });
+await shot('compact-dark.png', { path: '/?compact', width: 400, height: 560, scheme: 'dark' });
+const statusPath = join(home, 'demo-status.json');
+writeFileSync(statusPath, JSON.stringify(await (await fetch(base + '/api/status')).json()));
 await conn.close();
 server.close();
 db.close();
@@ -58,7 +61,7 @@ try {
   const swiftFile = join(home, 'glyphs.swift');
   writeFileSync(swiftFile, `import AppKit
 ${glyphs}
-let slots = [("asterisk", 77.0), ("cursorarrow", 64), ("arrow.up.circle", 51), ("xmark", 18), ("m.circle", 100)]
+let slots = [("claude", 92.0), ("cursor", 72), ("antigravity", 51), ("grok-bot", 18), ("openai", 42), ("muse", 100)]
   .map { MenuSlot(symbol: $0.0, text: MenuBarGlyphs.digits($0.1)) }
 let glyph = MenuBarGlyphs.image(for: slots)
 let s: CGFloat = 2, pad: CGFloat = 14, band: CGFloat = 26
@@ -74,10 +77,12 @@ let out = NSImage(size: NSSize(width: (glyph.size.width + pad * 2) * s, height: 
 let rep = NSBitmapImageRep(data: out.tiffRepresentation!)!
 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: "${OUT}/menubar.png"))
 `);
-  execFileSync('swift', [swiftFile], { stdio: 'ignore' });
+  execFileSync('swift', ['-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macos13.0`, '-module-cache-path', join(home, 'module-cache'), swiftFile], { stdio: 'inherit' });
   console.log(`  ${OUT}/menubar.png`);
 } catch (e) {
   console.log(`  (skipped menubar.png: ${e.message.split('\n')[0]})`);
 }
+// Build the native demo preview from the same Swift source and demo status, with no service/profile.
+execFileSync(process.execPath, ['scripts/render-native-screenshots.js', statusPath, home], { stdio: 'inherit' });
 rmSync(home, { recursive: true, force: true });
 rmSync(profile, { recursive: true, force: true });

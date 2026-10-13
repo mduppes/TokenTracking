@@ -4,6 +4,11 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- Standalone React + TypeScript + Tailwind/Vite landing page (`website/`, ADR-013), with verified Apple Silicon/Intel download links, responsive product walkthrough, dashboard light/dark screenshots, current-source Settings screenshots, privacy details, installation guidance and preview-release caveats.
+- Demo screenshots now include OpenAI, current brand glyphs, and the native SwiftUI panel and Settings; the compact web panel is captured separately. README and roadmap reflect current customization, meter selection and provider status.
+- **Settings** via the dropdown’s top-right gear (X to return): show/hide each service, drag whole rows with animated reordering as you hover, or use arrows to reorder, select a specific usage meter or keep Highest usage, and restore defaults. Choices persist locally; changes appear directly in the menu bar. Missing selected meters show `??`; hiding all services leaves the app icon accessible.
+- Authentic vector brand icons for all providers across the macOS menu bar and dashboard (Claude sunburst, Cursor isometric cube, Meta Muse cursive 'm', Grok ribbon loop, Antigravity arch curve, Google Gemini diamond sparkle, alongside the OpenAI knot).
+- Dashboard card headers, table view, and "Resets next" rows now display brand SVG icons next to provider names.
 - Self-contained Apple Silicon and Intel Mac DMG builds with checksum-verified bundled Node, relocatable service paths, download/install instructions, and optional Developer ID signing/notarization tooling (ADR-012). Initial downloads are explicitly labelled unsigned previews.
 - Browser providers now have dashboard and panel cards before their first stored reading, with an Open browser action. Skipped refreshes explain when the dedicated Chrome window must be quit with Cmd+Q.
 - OpenAI menu bar slot uses a locally drawn six-loop knot instead of the generic sparkle, still positioned after Grok Bot.
@@ -11,6 +16,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - **OpenAI (ChatGPT)** usage page support: the dedicated Chrome profile opens the usage overview and reads its rendered percentage meters with the shared DOM scraper. Added OpenAI to the dashboard, login flow and menu bar. Signed-in meter details still need end-to-end verification.
 - Menu bar shows OpenAI as `??` until its first reading is stored, so the new slot is visible before the first successful refresh.
 ### Fixed
+- Settings drag reordering works again on macOS: an in-panel drag gesture moves the whole row under the pointer and shifts neighboring rows on hover, replacing native drag/drop callbacks that were not moving rows. Verified upward and downward drags in the running app.
+- OpenAI no longer decides login from the initial 2.5-second guest shell: it waits up to 60 seconds for rendered usage, retries across authentication navigation, and distinguishes confirmed logout from loading errors. OpenAI-only signed-in refresh succeeded on 2026-10-13.
 - Refresh failures are surfaced in both UIs, and the service returns HTTP 500 for failed refreshes instead of reporting success.
 - OpenAI guest pages saying **Log in** now count as logged out, so they offer a login notice rather than a generic scraping error.
 - **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.

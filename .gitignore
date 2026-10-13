@@ -6,3 +6,5 @@ node_modules/
 .tokentracking-demo/
 .claude/settings.local.json
 build/
+website/dist/
+website/*.tsbuildinfo

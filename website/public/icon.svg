@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- TokenTracking app icon: "reset ring" = usage ring + clock hands (time until reset).
+       macOS icon grid: 824px rounded square centered on a 1024px canvas. Rendered by scripts/build-icon.js. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#04342C"/>
+  <circle cx="512" cy="512" r="244" fill="none" stroke="#085041" stroke-width="84"/>
+  <circle cx="512" cy="512" r="244" fill="none" stroke="#5DCAA5" stroke-width="84" stroke-linecap="round"
+          stroke-dasharray="1150 1533" transform="rotate(-90 512 512)"/>
+  <path d="M512 359 L512 512 L604 573" fill="none" stroke="#E1F5EE" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="512" cy="512" r="26" fill="#E1F5EE"/>
+</svg>

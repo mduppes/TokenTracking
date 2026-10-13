@@ -2,7 +2,7 @@
 
 ```
 ┌──────── Menu bar app (Swift) ────────┐      ┌──────────── Local service (Node, 127.0.0.1:7878) ───────────┐
-│ status item: most at-risk %          │ HTTP │  GET  /api/status  ◄── status.js + pacing.js ◄── SQLite      │
+│ status item: chosen usage slots          │ HTTP │  GET  /api/status  ◄── status.js + pacing.js ◄── SQLite      │
 │ popover: native SwiftUI panel ───────┼─────►│  POST /api/refresh ──► headless/refresh.js                   │
 │ starts/stops the service (child)     │      │  GET  /  (dashboard: public/)                                │
 └──────────────────────────────────────┘      │  timer: every 15 min ──► headless/refresh.js                 │
@@ -47,7 +47,7 @@ Flow per run:
 1. Skip if there's no profile yet, or if the `browser-login` window is open (the profile is locked).
 2. Launch Chrome and build the identity.
 3. For each task, open a page, navigate, wait 2.5 s, then check for a logged-out state.
-4. Run `read()`. API tasks use `fetch` in the page; DOM tasks inject `scrape-dom.js`, run `openSteps`, and poll `scrape()` for up to 25 s.
+4. OpenAI bypasses the initial 2.5 s login check and polls its rendered usage for up to 60 s, reinjecting the scraper after authentication navigation. Only a confirmed login page at timeout produces a login notice; loading failures produce an error. Other providers use the initial login check. Run `read()`. API tasks use `fetch` in the page; DOM tasks inject `scrape-dom.js`, run `openSteps`, and poll `scrape()` for up to 25 s.
 5. Store the snapshots and close the page.
 6. Quit Chrome (SIGKILL after 5 s if it lingers).
 
@@ -58,7 +58,8 @@ Scheduling lives in `index.js` (first run 10 s after start, then every N minutes
 ### Menu bar app (`menubar/TokenTrackingMenu.swift`)
 
 An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with plain `swiftc`. It's not SwiftUI `MenuBarExtra`; the status item gives more control and visibility checks. by `scripts/build-menubar.sh`. There's no Xcode project; source builds use local signing (or ad-hoc signing), with `LSUIElement` (no Dock icon) and `NSAllowsLocalNetworking`.
-- **Title:** polls `GET /api/status` every 60 s. `MenuBarGlyphs` draws one SF Symbol plus two characters per service (the % used by its worst meter, 0–99; `––` at the limit) into a single template image. Grok Bot is split out of Cursor by meter id. The tooltip lists per-service values plus the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %). With no data, it shows a gauge symbol.
+- **Title:** polls `GET /api/status` every 60 s. `MenuBarGlyphs` draws one local brand icon plus two characters per service (the highest % used by default, or the selected meter, 0–99; `––` at the limit) into a single template image. Grok Bot is split out of Cursor by meter id. The tooltip lists per-service values plus the most at-risk meter (rank limited > over-pace > ahead > ok, then highest %). Selected slots without data show `??`; when every slot is hidden, a gauge icon keeps the app accessible.
+- **Customization:** The top-right gear in the native dropdown toggles the **Settings** editor and becomes an X to return. The editor has checkboxes, whole-row dragging with a floating row and animated insertion space on hover (an in-panel SwiftUI gesture, avoiding unreliable native pasteboard drag callbacks), accessible up/down buttons, a per-service **Show** meter selector and Restore defaults. Changes appear directly in the menu bar. Swift `MenuBarPreferences` stores the ordered service IDs, hidden IDs and selected meter IDs in local `UserDefaults` (`menuBarPreferences.v1`); no service/API/DB change. Defaults preserve the current six slots, with Gemini available but hidden. Changes redraw immediately using cached status, even offline. Selected slots without readings show `??`; a missing chosen meter stays `??` rather than switching to a different limit; hiding every slot leaves a clickable gauge icon. Unknown/duplicate saved IDs are cleaned up, and future services are appended hidden. Hiding a slot does not stop refreshing it or remove its dashboard card.
 - **Service down:** if the service is unreachable, the panel says so.
 - **Panel:** native SwiftUI (`PanelView`, `ProviderCard`, `MeterRow`) drawn from the decoded `/api/status`: header (updated / next refresh), stale and problem notices with **Log in** (`POST /api/login`), the 5 soonest resets, and every meter with its bar, even-pace tick, pace label and countdown pill. It **used to be a `WKWebView` of `/?compact`**, but after the Mac slept the web view often drew nothing, even when recreated on every open (2026-10-11). The native panel uses the same data path as the menu bar numbers, which kept working. The full dashboard stays one click away (Open dashboard).
 - **Hidden-icon fallback:** every 3 s the app checks whether the status item's window is visible. It's hidden if the app isn't allowed in System Settings → Menu Bar (new bundles start disallowed on macOS 26; seen 2026-10-10) or the bar is full. While hidden, the app switches to a regular activation policy (Dock icon) and shows the panel in a window, with a banner and a button to the Menu Bar settings. When the item becomes visible, it closes the window and goes back to menu-bar-only. Clicking the Dock icon reopens the window. On macOS 26, status item windows are owned by "Control Center" in `CGWindowList`.
@@ -127,3 +128,9 @@ Meters not seen for 7 days are hidden. A meter is marked stale when its last rea
 ## Distribution
 
 `npm run build:release -- arm64` (or `-- x64`) downloads a pinned, SHA-256-verified official Node runtime and compiles the corresponding Swift architecture. The app includes `Contents/Helpers/node`, the Node license, and an allow-listed `Contents/Resources/service` tree (`lib`, `server/src`, `server/public`, package metadata and license). It never bundles user data or the browser profile. Releases are DMGs with an Applications shortcut. Runtime storage remains in `~/.tokentracking`. See ADR-012 and [RELEASING.md](RELEASING.md) for signing, notarization and validation.
+
+## Public website (build-time dependencies only)
+
+`website/` is a separate React + TypeScript + Tailwind/Vite project with its own package manifest and lockfile (ADR-013). It builds to `website/dist` for static hosting. Neither the local service nor release DMGs include it. There are no analytics, remote fonts, account integrations or calls to the local usage service. Images come from demo-only product captures, copied with `npm run sync:assets --prefix website`; release metadata lives in `website/src/release.ts`.
+
+`npm run screenshots` captures web dashboards through a throwaway Chrome profile and builds an isolated native preview app fed demo JSON. Native panel/Settings PNGs are captured from that preview with computer-use tools or manually. AppKit bitmap caching was not reliable for SwiftUI controls, so native screenshot capture stays a separate step. No provider reads, real usage, browser logins or production preferences are captured. `compact-dark.png` shows the web compact view; `panel-dark.png` and `settings-dark.png` show native views.

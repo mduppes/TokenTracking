@@ -4,14 +4,14 @@ Read this first, then `docs/ARCHITECTURE.md`. The current state and next steps l
 
 ## What this is
 A personal, local-first tracker for AI **subscription** usage limits: Claude, Cursor (including Grok Bot), Gemini app, Muse, and ChatGPT, with Antigravity support.
-- **Menu bar app** (Swift): shows the most at-risk meter and starts and stops a zero-dependency **Node service** on 127.0.0.1:7878.
+- **Menu bar app** (Swift): shows configurable service usage slots and starts and stops a zero-dependency **Node service** on 127.0.0.1:7878.
 - **Node service:** every 15 minutes it launches a short-lived **headless Chrome** with a dedicated, logged-in profile, reads each provider from inside its own site, stores snapshots in SQLite, computes pacing and serves the dashboard.
 - **No browser extension** since v0.5 (ADR-010).
 
 ## Hard constraints (don't violate without a new ADR and the user's sign-off)
 - **No secrets.** Don't read cookies, the Keychain or CLI token files, and don't ask for API keys (ADR-002, SECURITY.md). The headless profile's logins stay inside Chrome; our code never reads them. **The one exception is ADR-011:** Antigravity's local language-server CSRF token is read from its process args per request, used only for a 127.0.0.1 call, and never logged or stored. Don't widen it without a new ADR.
 - **Nothing leaves the machine.** No telemetry, no third-party requests and no CDNs in the dashboard.
-- **Zero dependencies** (ADR-003): Node built-ins only, and the Swift app is built with plain `swiftc`.
+- **Zero runtime dependencies** (ADR-003): Node built-ins only, and the Swift app is built with plain `swiftc`. ADR-013 scopes React/TypeScript/Tailwind/Vite dependencies to the separately deployed `website/`; do not add them to the tracker or release bundle.
 - **Read-only** against provider sites.
 - **Invisible.** No visible windows or Dock activity during refresh (the user's explicit requirement).
 - Never commit real captured payloads without redacting personal data (emails, names, org ids, the Cursor `?for=` user id).
@@ -24,6 +24,7 @@ server/src/headless/  chrome.js = launch + CDP over pipe + browser identity; ref
 server/src/local/     antigravity.js = local language-server reader (ADR-011)
 server/public/        dashboard (vanilla JS; /?compact = narrow single-column view)
 menubar/              macOS menu bar app (NSStatusItem + native SwiftUI panel) + AppIcon.icns; scripts/build-menubar.sh builds it
+website/              standalone React/TypeScript/Tailwind landing page; independent static build (ADR-013)
 assets/icon.svg       app icon source → npm run build:icon
 scripts/              browser-login, refresh-once, seed-demo, build-menubar
 test/                 node:test suites (headless.test.js drives real Chrome against fixtures)

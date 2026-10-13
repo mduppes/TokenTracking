@@ -4,6 +4,10 @@ All providers are read by the headless refresher (`server/src/headless/refresh.j
 
 Mac packaging check (2026-10-13): the release bundles the same provider readers; no live provider reads were rerun for distribution. Verification dates below remain the dates of actual provider checks.
 
+Website/screenshots (2026-10-13): refreshed assets use throwaway demo data only; no provider reads were rerun for the landing page. Native screenshots show the current source, while download links point to the older published preview.
+
+Menu bar customization (2026-10-13): all seven service slots, including Gemini and Cursor’s separate Grok Bot limit, are selectable. Visibility affects only the menu bar; provider collection and verification dates below are unchanged.
+
 Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 
 | Provider | Page loaded | How usage is read | Meters | Status |
@@ -64,6 +68,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 - The page's current meter labels, reset wording, and signed-in behavior still need end-to-end verification with the user's ChatGPT subscription. Meters are only recorded when the page exposes a percentage or valued progress bar recognized by `scrape-dom.js`.
 - Browser warnings offer **Open browser** even when the task reports an error, so the user can inspect the dedicated profile's session. Quit that window with Cmd+Q to trigger another refresh.
 - The dashboard and native panel show an empty OpenAI card even before its first reading. If the login browser remains open, refresh reports that it skipped browser usage and asks the user to quit that Chrome window with Cmd+Q.
+- **Loading/login check (2026-10-13):** waits up to 60 seconds for usage meters rather than rejecting the initial guest shell after 2.5 seconds. Login is reported only if the final rendered state is an auth/login page or shows a standalone Log in / Sign in action without usage. A loading timeout or unrelated error page reports an error. OpenAI-only signed-in refresh succeeded with this reader (three meters); duplicate-meter mapping remains pending.
 - **Verified guest state (2026-10-13):** the dedicated profile redirects to `/` on `chatgpt.com`, displays a Log in button, and exposes no progress bars or meters.
 - **Signed-in capture (2026-10-13):** stored 5-hour and weekly limits with reset times, plus a generic "Usage remaining" row. That generic row may duplicate the 5-hour meter; verify the rendered layout and add a redacted fixture before calling the meter mapping fully verified.
 

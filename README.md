@@ -4,15 +4,15 @@
 
 One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset. It lives in your macOS menu bar.
 
-Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **OpenAI (ChatGPT)**, **Gemini (app)**, **Muse (Meta)**, and **Antigravity** (per quota pool, while the app is running). OpenAI's usage page reader still needs signed-in verification. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
+Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **OpenAI (ChatGPT)**, **Gemini (app)**, **Muse (Meta)**, and **Antigravity** (per quota pool, while the app is running). OpenAI signed-in reads have been verified; a possible duplicate usage row is still under review. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 It's **local-first**:
-- **Refresh:** every 15 minutes a headless Chrome (no window, no Dock icon) uses its own logged-in profile to read each service's usage, then quits. Nothing runs in between.
+- **Refresh:** every 15 minutes a headless Chrome (no window, no Dock icon) uses its own logged-in profile to read each service's usage, then quits. Chrome exits after each run.
 - **Storage:** a small local service stores the history and works out pacing.
 - **Antigravity:** read from the desktop app's own local server while it's running (no browser; see [SECURITY](docs/SECURITY.md)).
 - **Display:** a menu bar app shows the result.
 
-No API keys, no accounts, no cloud, no browser extension.
+No API keys, no TokenTracking account, no telemetry, no browser extension. Your existing provider accounts are used only inside the dedicated browser profile.
 
 <p align="center">
   <img src="docs/images/menubar.png" width="440" alt="Menu bar: one icon and % used per service, in light and dark menu bars">
@@ -24,7 +24,7 @@ No API keys, no accounts, no cloud, no browser extension.
   <img src="docs/images/dashboard-light.png" width="520" alt="Dashboard: resets-next list and per-service cards with usage bars, even-pace markers, countdowns and sparklines">
 </p>
 
-<sub>Screenshots use demo data (`npm run screenshots`).</sub>
+<sub>Screenshots show the current source build and use demo data (`npm run screenshots`; native captures use the generated demo-only preview app). Published preview downloads may lag the source; Settings customization will ship in the next packaged preview.</sub>
 
 ## Features
 
@@ -38,11 +38,12 @@ No API keys, no accounts, no cloud, no browser extension.
 - **Status at a glance.** Shown as a colored dot plus a label: On pace, Ahead of pace, Will run out before reset, Limit reached.
 - **History.** A sparkline per meter, with hover readouts, from every snapshot stored locally in SQLite.
 - **Menu bar app:**
-  - **Title:** one icon and % per service, e.g. `✳74 ➚70 ⇧51 ✕86 Ⓜ97`. Each number is that service's worst meter, `––` means at the limit, and hovering shows details.
-  - **Click it** for a compact dashboard with Refresh now / Open dashboard / Quit.
-  - **Lifecycle:** it starts and stops everything it needs.
+  - **Usage slots:** a brand icon and percentage per selected service; `––` means at the limit and `??` means no reading or an unavailable selected meter.
+  - **Native panel:** click for notices, upcoming resets and every meter, with Refresh now / Open dashboard / Quit.
+  - **Settings:** the top-right gear becomes an X to return. Show/hide services (including Gemini), drag whole rows with live reordering, use accessible arrow buttons, and choose a specific meter or **Highest usage**. Preferences save locally; Restore defaults resets them. Hiding all services leaves a clickable app icon.
+  - **Lifecycle:** the app starts and stops the local service it owns.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
-- **Stale and login notices with a Log in button.** Services whose data is stale (missed about 2 refreshes) or whose login expired are listed at the top with the reason. **Log in** opens the TokenTracking browser on that service; quit it (⌘Q) when you're done and that service refreshes automatically.
+- **Stale, login and error notices with an Open browser button.** Services whose data is stale (missed about 2 refreshes) or whose login expired are listed at the top with the reason. **Open browser** opens the TokenTracking browser on that service; quit it (⌘Q) when you're done and that service refreshes automatically.
 
 ## Download for Mac
 
@@ -58,9 +59,11 @@ Requires **macOS 13+** and **Google Chrome**. Node and the local service are inc
 
 To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
 
+The current GitHub download is **0.6.0-preview.1**. Menu bar Settings shown in these screenshots belong to the current source and will be included in the next packaged release.
+
 ## Build from source
 
-Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Google Chrome, and the Xcode command line tools (for `swiftc`). There are no npm dependencies, so there's nothing to install.
+Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Google Chrome, and the Xcode command line tools (for `swiftc`). The tracker runtime has no npm dependencies, so there is nothing to install for the app/service. The optional website has its own dependencies and build.
 
 0. **Get the code:**
    ```bash
@@ -89,13 +92,18 @@ Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Goo
 
 ### The menu bar app
 
-- **What it shows:** one icon per service, each with a digit for that service's worst meter:
-  - **Icons** (in order): ✳ Claude, ➚ Cursor, ⇧ Antigravity, ✕ Grok Bot, a six-loop knot for OpenAI, Ⓜ Muse. Gemini is only on the dashboard (its limits rarely matter); change `MenuBarGlyphs.services` to pick your own.
-  - **The number** is the % used (0–99), `––` = at the limit, `??` = no reading yet.
-  - **Hover** for exact numbers and the most at-risk meter. Click for the compact dashboard.
+- **What it shows:** one icon and two usage characters per selected service.
+  - **Defaults:** Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse. Gemini is available in Settings and hidden by default.
+  - **The number:** the highest usage percentage among that service’s meters, or the specific meter selected in Settings. Cursor excludes Grok Bot, which has its own slot.
+  - **States:** 0–99 = % used; `––` = at/over the limit; `??` = no reading or selected meter unavailable. Selected slots stay in place while data loads.
+  - **Hover** for meter names and the most at-risk reading across all services. Click for the native usage panel; the top-right gear opens Settings.
+  - **Preferences** persist locally across restarts. Hiding a slot does not stop collection or hide dashboard cards.
+
+<p align="center"><img src="docs/images/settings-dark.png" width="300" alt="Native Settings: service selection, ordering and per-service meter choices"></p>
+
 - **It's the only thing you run.** Opening it starts the local service in the background (and restarts it if it dies). Quitting it stops the service, and the service also exits by itself if the app is force-killed. Service logs go to `~/.tokentracking/service.log`.
 - **Start at login (optional):** add `build/TokenTracking.app` under System Settings → General → Login Items. That's a one-time step, because rebuilding updates the app in place.
-- **Moving things:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
+- **Moving source builds:** the paths to this project and to `node` are baked in at build time, so re-run `npm run build:menubar` if you move the project or change Node versions.
 - **Can't see the icon?** macOS hides menu bar icons in two cases:
   - **The app isn't allowed.** Turn **TokenTracking** on under **System Settings → Menu Bar → Allow in the Menu Bar**. If it's on but the icon still doesn't show, the entry is probably tied to an older build: without the signing certificate (step 3), every rebuild gets a new identity and the setting goes stale.
   - **The menu bar is full**, common on a MacBook with a notch. Turn off other items or Cmd-drag them out.
@@ -111,6 +119,18 @@ npm run demo
 ```bash
 TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_HEADLESS=0 npm start
 ```
+
+## Landing page
+
+The standalone React + TypeScript + Tailwind website lives in [`website/`](website/README.md). Its dependencies are isolated from the zero-dependency app/service, and release builds never bundle the website. It builds to static files for hosting.
+
+```bash
+npm ci --prefix website
+npm run dev --prefix website
+npm run build --prefix website
+```
+
+Regenerate web screenshots and build the native demo preview with `npm run screenshots`; capture the demo app’s panel/Settings (never the production app), then copy the demo assets with `npm run sync:assets --prefix website`. Download URLs, release version and preview status are centralized in `website/src/release.ts`. See [ADR-013](docs/DECISIONS.md#adr-013-standalone-react-landing-page-2026-10-13).
 
 ## Commands
 
@@ -160,4 +180,4 @@ This is meant for personal use, reading your own usage with your own logged-in s
 
 ## Disclaimer
 
-TokenTracking is an independent personal project. It is not affiliated with, endorsed by, or supported by Anthropic, Anysphere (Cursor), xAI, Google, or Meta. Product names are trademarks of their respective owners. It relies on undocumented web pages and endpoints that may change or break at any time, and using it may be subject to each service's terms. Use at your own risk.
+TokenTracking is an independent personal project. It is not affiliated with, endorsed by, or supported by Anthropic, Anysphere (Cursor), xAI, Google, Meta, or OpenAI. Product names are trademarks of their respective owners. It relies on undocumented web pages and endpoints that may change or break at any time, and using it may be subject to each service's terms. Use at your own risk.

@@ -36,3 +36,15 @@ Repeat for x64. The build signs the bundled Node helper with V8 JIT entitlements
 Before promoting to stable, validate `spctl --assess --type execute --verbose <app>`, test a quarantined download on fresh Macs of both architectures, and confirm first-launch login, Chrome detection, menu bar permission, quit/relaunch and upgrade behavior. Provider verification remains tracked separately in `PROVIDERS.md`.
 
 References: [Apple distribution packaging](https://developer.apple.com/documentation/xcode/packaging-mac-software-for-distribution), [Developer ID](https://developer.apple.com/developer-id/), [Node 22.23.3 binaries and checksums](https://nodejs.org/dist/v22.23.3/).
+
+## Website and screenshot checklist
+
+The static landing page is separate from the release allow-list (ADR-013). Before announcing a new Mac release:
+
+1. Verify both uploaded DMGs and checksum assets exist.
+2. Update `website/src/release.ts` and README download URLs/version notes together.
+3. Regenerate demo web screenshots with `npm run screenshots`; capture the generated `TokenTrackingDemo.app` panel and Settings separately, never the production app. Copy approved assets with `npm run sync:assets --prefix website`.
+4. If the new release includes Settings customization, remove the website/README caveat that those controls are only in the current source build. Do not remove unsigned-preview installation guidance until Developer ID signing and notarization are verified.
+5. Run `npm run build --prefix website` and check desktop/mobile layouts before deploying `website/dist`.
+
+The currently linked `v0.6.0-preview.1` release predates menu bar customization. The website documents that difference explicitly. Website hosting/domain selection remains separate from Mac release publication.
