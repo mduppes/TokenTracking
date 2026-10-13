@@ -23,6 +23,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Hosted Stripe support links and configurable creator links on the landing page (2026-10-13).
 - [x] Standalone React/TypeScript/Tailwind landing page with Mac downloads, demo screenshots, current-source Settings walkthrough, installation notes and privacy details (2026-10-13; local preview).
 - [x] Menu bar service selection and ordering: top-right gear editor, gesture-based hover reordering of whole rows (up/down mouse drags verified), per-service meter selection, saved local preferences, Gemini option and Restore defaults (2026-10-13).
 - [x] Self-contained Mac DMG packaging and README download/install instructions for Apple Silicon and Intel (2026-10-13; preview signing).

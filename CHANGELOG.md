@@ -4,6 +4,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- Landing page support links open the creator’s hosted Stripe checkout from the top navigation, hero downloads, footer and a prominent dedicated support section; creator profile links are configured separately, with GitHub/LinkedIn icons and a named mduppes.com link. No payment keys, widgets or backend are required.
 - Standalone React + TypeScript + Tailwind/Vite landing page (`website/`, ADR-013), with verified Apple Silicon/Intel download links, responsive product walkthrough, dashboard light/dark screenshots, current-source Settings screenshots, privacy details, installation guidance and preview-release caveats.
 - Demo screenshots now include OpenAI, current brand glyphs, and the native SwiftUI panel and Settings; the compact web panel is captured separately. README and roadmap reflect current customization, meter selection and provider status.
 - **Settings** via the dropdown’s top-right gear (X to return): show/hide each service, drag whole rows with animated reordering as you hover, or use arrows to reorder, select a specific usage meter or keep Highest usage, and restore defaults. Choices persist locally; changes appear directly in the menu bar. Missing selected meters show `??`; hiding all services leaves the app icon accessible.
@@ -22,6 +23,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - OpenAI guest pages saying **Log in** now count as logged out, so they offer a login notice rather than a generic scraping error.
 - **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.
 ### Changed
+- Landing page colors now match the app: forest green and mint from its icon, warm neutral surfaces from the dashboard, and amber for the illustrative ahead-of-pace meter.
+- All landing-page external links, including Mac downloads and documentation, open in a new tab; section navigation stays on the page.
 - Replaced the confusing `––` menu bar limit indicator with an intuitive reset countdown (e.g. `↻2h`, `↻45m`, `↻1d`) showing when the quota frees up, falling back to `MAX` when reset time is unknown. Tooltip also details the remaining reset duration when limited.
 - **One source for presentation:** `/api/status` now includes `notices`, `resetsNext` and `providers[].planLabel` (`withPresentation` in `status.js`, unit-tested). The web dashboard and the menu bar panel both render them as-is instead of each re-deriving them, so they can't drift apart.
 ### Added
