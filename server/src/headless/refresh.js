@@ -72,6 +72,16 @@ export const TASKS = [
     read: (page) => readDom(page),
   },
   {
+    id: 'openai',
+    url: 'https://chatgpt.com/settings/usage?tab=overview',
+    loggedOut: (href, text) => !/(^|\.)chatgpt\.com$/.test(new URL(href).hostname)
+      || /\/auth\/login|\/login|\/auth\/logout/.test(new URL(href).pathname)
+      || (/\b(?:log|sign)\s*in\b/i.test(text) && !/usage/i.test(text)),
+    // The usage page is read from its rendered UI. Keep this on the dedicated Chrome profile so
+    // ChatGPT's subscription session never leaves the browser boundary.
+    read: (page) => readDom(page),
+  },
+  {
     id: 'muse',
     url: 'https://muse.ai/',
     loggedOut: (href, text) => !/(^|\.)muse\.ai$/.test(new URL(href).hostname) || /Log in or create an account/i.test(text),

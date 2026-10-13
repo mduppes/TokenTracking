@@ -20,9 +20,44 @@ test('notices: stale with reason, login, errors; skipped is silent', () => {
     antigravity: { status: 'skipped', message: "Antigravity isn't running" },
     claude: { status: 'ok' },
   } }, new Set(['muse', 'gemini', 'cursor', 'claude']), NOW);
-  assert.deepEqual(r.notices.map((n) => [n.provider, n.kind, n.canLogIn]), [['muse', 'stale', true], ['gemini', 'login', true], ['cursor', 'error', false]]);
+  assert.deepEqual(r.notices.map((n) => [n.provider, n.kind, n.canLogIn]), [['muse', 'stale', true], ['gemini', 'login', true], ['cursor', 'error', true]]);
+  assert.ok(r.notices.every((n) => n.actionLabel === 'Open browser'));
   assert.equal(r.notices[0].text, 'Muse (Meta) is stale: last read 3h ago · last refresh: needs a login');
   assert.equal(r.notices[2].text, 'Cursor: evaluate timeout');
+});
+
+test('browser errors remain actionable before any meter is stored; local errors have no browser action', () => {
+  const r = withPresentation({ providers: [] }, { results: {
+    openai: { status: 'error', message: 'no usage found' },
+    antigravity: { status: 'error', message: 'local server unavailable' },
+  } }, new Set(['openai']), NOW);
+  assert.deepEqual(r.notices.map((n) => [n.provider, n.canLogIn, n.actionLabel]), [
+    ['openai', true, 'Open browser'], ['antigravity', false, null],
+  ]);
+});
+
+test('registered browser providers have a card before their first reading', () => {
+  const input = { providers: [] };
+  const r = withPresentation(input, { results: { openai: { status: 'login' } } }, new Set(['openai']), NOW);
+  assert.equal(r.providers[0].name, 'OpenAI');
+  assert.deepEqual(r.providers[0].meters, []);
+  assert.equal(r.providers[0].lastCapturedAt, null);
+  assert.equal(r.providers[0].canOpenBrowser, true);
+  assert.match(r.providers[0].emptyText, /sign in/i);
+  assert.equal(input.providers.length, 0, 'presentation does not mutate the stored status');
+});
+
+test('a browser lock explains skipped refreshes instead of silently appearing successful', () => {
+  const r = withPresentation({ providers: [] }, { results: {
+    openai: { status: 'skipped', message: 'browser-login window is still open' },
+  } }, new Set(['openai']), NOW);
+  assert.match(r.refreshMessage, /Quit.*Cmd\+Q/);
+  assert.equal(r.providers[0].emptyText, r.refreshMessage);
+  assert.deepEqual(r.notices, []);
+  const localOnly = withPresentation({ providers: [] }, { results: {
+    antigravity: { status: 'skipped', message: 'not running' },
+  } }, new Set(), NOW);
+  assert.equal(localOnly.refreshMessage, null);
 });
 
 test('resetsNext sorted soonest first, only meters with a reset time', () => {

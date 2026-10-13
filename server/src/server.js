@@ -53,14 +53,14 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
         if (!refresh) return send(404, 'headless refresh disabled');
         await readJson(req); // enforces JSON content-type (forces a CORS preflight for cross-site callers)
         const run = await refresh();
-        return send(200, run || { error: 'refresh failed' });
+        return send(run ? 200 : 500, run || { error: 'refresh failed' });
       }
       if (req.method === 'POST' && url.pathname === '/api/login') {
         // Opens a visible login window for one provider; refreshes that provider once it's closed.
         const body = await readJson(req);
         const provider = typeof body?.provider === 'string' && Object.hasOwn(LOGIN_URLS, body.provider) ? body.provider : null;
         if (!provider) return send(400, 'unknown provider');
-        const r = openLoginWindow(config, [provider], () => refresh?.([provider]));
+        const r = openLoginWindow(config, [provider], () => refresh?.([provider])?.catch(() => {})); // refresh logs failures; keep the login-exit callback from rejecting unhandled
         return send(r.ok ? 200 : 409, r);
       }
       if (req.method === 'GET' && !url.pathname.startsWith('/api/')) return serveStatic(url.pathname, send);

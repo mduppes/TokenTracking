@@ -1,6 +1,6 @@
 // Opens a normal (visible) Chrome window using TokenTracking's dedicated profile so you can log in
 // to each service. Headless refreshes reuse these logins. Quit that Chrome window (Cmd+Q) when done.
-// Usage: npm run browser-login [-- muse gemini]   (the dashboard's "Log in" buttons do the same)
+// Usage: npm run browser-login [-- muse gemini openai]   (the dashboard's "Log in" buttons do the same)
 import { loadConfig } from '../server/src/config.js';
 import { openLoginWindow } from '../server/src/headless/login.js';
 

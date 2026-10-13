@@ -10,6 +10,7 @@ let tableView = false;
 const compact = new URLSearchParams(location.search).has('compact');
 if (compact) document.documentElement.classList.add('compact');
 let data = null;
+let refreshError = null;
 
 function dur(ms) {
   if (ms == null) return null;
@@ -116,10 +117,13 @@ function drawSpark(svg, m) {
 
 /** Notices (stale, needs login, errors) come ready-made from the service (status.js withPresentation). */
 function renderNotices() {
+  const feedback = $('#refreshFeedback');
+  feedback.textContent = refreshError || data.refreshMessage || '';
+  feedback.hidden = !feedback.textContent;
   $('#refreshBtn').hidden = data.headless === null; // null = headless refresh disabled
   const dot = { stale: 's-unknown', login: 's-limited', error: 's-over-pace' };
   $('#notices').innerHTML = (data.notices || []).map((n) => `<div class="notice"><span class="dot ${dot[n.kind] || 's-unknown'}"></span><span>${esc(n.text)}</span>${
-    n.canLogIn ? ` <button type="button" class="login-btn" data-provider="${esc(n.provider)}">Log in</button>` : ''}</div>`).join('');
+    n.canLogIn ? ` <button type="button" class="login-btn" data-provider="${esc(n.provider)}">${esc(n.actionLabel || 'Open browser')}</button>` : ''}</div>`).join('');
 }
 
 function render() {
@@ -135,19 +139,19 @@ function render() {
     return;
   }
   $('#grid').innerHTML = data.providers.map((p, pi) => `<section class="card">
-      <h2><span>${esc(p.name)}${p.planLabel ? ` <span class="meta">${esc(p.planLabel)}</span>` : ''}</span><span class="meta">${ago(p.lastCapturedAt)}</span></h2>
-      ${p.meters.map((m, mi) => meterHtml(m, pi, mi)).join('')}
+      <h2><span>${esc(p.name)}${p.planLabel ? ` <span class="meta">${esc(p.planLabel)}</span>` : ''}</span>${p.lastCapturedAt ? `<span class="meta">${ago(p.lastCapturedAt)}</span>` : ''}</h2>
+      ${p.meters.length ? p.meters.map((m, mi) => meterHtml(m, pi, mi)).join('') : `<div class="provider-empty"><p>${esc(p.emptyText)}</p><div>${p.canOpenBrowser ? `<button type="button" class="login-btn" data-provider="${esc(p.id)}">${esc(p.actionLabel)}</button>` : ''}</div></div>`}
     </section>`).join('');
   document.querySelectorAll('svg.spark').forEach((svg) => drawSpark(svg, data.providers[svg.dataset.p].meters[svg.dataset.m]));
 
   $('#table').innerHTML = `<table><thead><tr><th>Provider</th><th>Meter</th><th>Window</th><th>Used</th><th>Even pace</th><th>Status</th><th>Resets</th><th>Budget</th><th>Read</th></tr></thead><tbody>
-    ${data.providers.flatMap((p) => p.meters.map((m) => `<tr>
+    ${data.providers.flatMap((p) => p.meters.length ? p.meters.map((m) => `<tr>
       <td>${esc(p.name)}</td><td>${esc(m.label)}</td><td>${esc(m.window)}</td>
       <td>${m.usedPercent == null ? '?' : Math.round(m.usedPercent) + '%'}</td>
       <td>${m.pace.expectedPercent == null ? '—' : Math.round(m.pace.expectedPercent) + '%'}</td>
       <td>${PACE_LABEL[m.pace.status]}</td>
       <td>${m.resetsAt ? `${when(m.resetsAt)} (${dur(m.pace.remainingMs)})` : esc(m.resetText || '—')}</td>
-      <td>${esc(budgetText(m) || '—')}</td><td>${ago(m.capturedAt)}</td></tr>`)).join('')}
+      <td>${esc(budgetText(m) || '—')}</td><td>${ago(m.capturedAt)}</td></tr>`) : [`<tr><td>${esc(p.name)}</td><td colspan="8">${esc(p.emptyText)} ${p.canOpenBrowser ? `<button type="button" class="login-btn" data-provider="${esc(p.id)}">${esc(p.actionLabel)}</button>` : ''}</td></tr>`]).join('')}
   </tbody></table>`;
 }
 
@@ -164,20 +168,29 @@ async function load() {
 $('#refreshBtn').onclick = async () => {
   const b = $('#refreshBtn');
   b.disabled = true; b.textContent = 'Refreshing…';
-  try { await fetch('/api/refresh', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); } catch {}
-  b.disabled = false; b.textContent = 'Refresh now';
-  load();
+  refreshError = null;
+  try {
+    const r = await fetch('/api/refresh', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    if (!r.ok) throw new Error(`The service returned HTTP ${r.status}.`);
+    const run = await r.json();
+    if (run.error) throw new Error(run.error);
+  } catch (e) { refreshError = `Refresh failed: ${e.message}`; }
+  finally { b.disabled = false; b.textContent = 'Refresh now'; }
+  await load();
+  if (refreshError) { $('#refreshFeedback').textContent = refreshError; $('#refreshFeedback').hidden = false; }
 };
-// "Log in" buttons in notices: open the TokenTracking browser on that provider's login page.
-$('#notices').addEventListener('click', async (e) => {
+// Open the dedicated browser session so the user can inspect it and log in if needed.
+document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.login-btn');
   if (!btn) return;
   btn.disabled = true;
   const res = await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: btn.dataset.provider }) }).catch(() => null);
   const r = res ? await res.json().catch(() => ({})) : { reason: 'service unreachable' };
-  btn.replaceWith(Object.assign(document.createElement('span'), {
+  btn.disabled = false;
+  btn.parentElement.querySelector('.login-hint')?.remove();
+  btn.after(Object.assign(document.createElement('span'), {
     className: 'login-hint',
-    textContent: r.ok ? 'Login window opened: log in, then quit it (⌘Q). It refreshes automatically.' : r.reason || 'Could not open the login window.',
+    textContent: r.ok ? 'Browser opened: check your login, then quit it (⌘Q). It refreshes automatically.' : r.reason || 'Could not open the browser.',
   }));
 });
 $('#viewToggle').onclick = () => { tableView = !tableView; render(); };

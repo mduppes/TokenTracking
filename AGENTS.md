@@ -3,7 +3,7 @@
 Read this first, then `docs/ARCHITECTURE.md`. The current state and next steps live in `docs/ROADMAP.md` and `CHANGELOG.md` → `[Unreleased]`.
 
 ## What this is
-A personal, local-first tracker for AI **subscription** usage limits: Claude, Cursor (including Grok Bot), Gemini app and Muse, with Antigravity planned.
+A personal, local-first tracker for AI **subscription** usage limits: Claude, Cursor (including Grok Bot), Gemini app, Muse, and ChatGPT, with Antigravity support.
 - **Menu bar app** (Swift): shows the most at-risk meter and starts and stops a zero-dependency **Node service** on 127.0.0.1:7878.
 - **Node service:** every 15 minutes it launches a short-lived **headless Chrome** with a dedicated, logged-in profile, reads each provider from inside its own site, stores snapshots in SQLite, computes pacing and serves the dashboard.
 - **No browser extension** since v0.5 (ADR-010).

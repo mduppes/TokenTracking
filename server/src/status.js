@@ -1,11 +1,12 @@
 import { computePace, WINDOW_HOURS } from './pacing.js';
 
-export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)', antigravity: 'Antigravity' };
+export const PROVIDER_NAMES = { claude: 'Claude', cursor: 'Cursor', gemini: 'Gemini', muse: 'Muse (Meta)', antigravity: 'Antigravity', openai: 'OpenAI' };
 // Display order for providers everywhere (dashboard cards, table, CLI); unknown ids go last, A–Z.
-const PROVIDER_ORDER = ['claude', 'cursor', 'antigravity', 'muse', 'gemini'];
+const PROVIDER_ORDER = ['claude', 'cursor', 'openai', 'antigravity', 'muse', 'gemini'];
 const WINDOW_ORDER = { session: 0, daily: 1, weekly: 2, monthly: 3, other: 4 };
 const DEFAULT_STALE_AFTER_MS = 60 * 6e4;
 const HIDE_AFTER_DAYS = 7;
+const providerRank = (id) => PROVIDER_ORDER.includes(id) ? PROVIDER_ORDER.indexOf(id) : PROVIDER_ORDER.length;
 
 /** Build the dashboard/CLI view: latest reading per meter + pacing + short history. */
 /** @param {{staleAfterMs?: number}} opts  a meter is stale when its last reading is older than this */
@@ -36,8 +37,7 @@ export function buildStatus(db, now = new Date(), { staleAfterMs = DEFAULT_STALE
     if (!p.lastCapturedAt || row.captured_at > p.lastCapturedAt) p.lastCapturedAt = row.captured_at;
   }
   for (const p of providers.values()) p.meters.sort((a, b) => (WINDOW_ORDER[a.window] ?? 9) - (WINDOW_ORDER[b.window] ?? 9) || a.label.localeCompare(b.label));
-  const rank = (id) => (PROVIDER_ORDER.includes(id) ? PROVIDER_ORDER.indexOf(id) : PROVIDER_ORDER.length);
-  const ordered = [...providers.values()].sort((a, b) => rank(a.id) - rank(b.id) || a.id.localeCompare(b.id));
+  const ordered = [...providers.values()].sort((a, b) => providerRank(a.id) - providerRank(b.id) || a.id.localeCompare(b.id));
   return { generatedAt: now.toISOString(), providers: ordered };
 }
 
@@ -63,6 +63,14 @@ export function ago(iso, now = new Date()) {
  */
 export function withPresentation(status, headless, canLogIn = new Set(), now = new Date()) {
   const results = headless?.results || {};
+  const providers = [...status.providers];
+  // A provider exists before its first snapshot: otherwise failed first reads make its card vanish.
+  for (const id of canLogIn) {
+    if (!providers.some((p) => p.id === id)) providers.push({ id, name: PROVIDER_NAMES[id] || id, plan: null, lastCapturedAt: null, meters: [] });
+  }
+  providers.sort((a, b) => providerRank(a.id) - providerRank(b.id) || a.id.localeCompare(b.id));
+  const waitingForBrowser = Object.values(results).some((r) => r.status === 'skipped' && r.message === 'browser-login window is still open');
+  const refreshMessage = waitingForBrowser ? 'Browser usage was not refreshed. Quit the TokenTracking Chrome window with Cmd+Q, then refresh again.' : null;
   const name = (id) => status.providers.find((p) => p.id === id)?.name || PROVIDER_NAMES[id] || id;
   const reason = (r) => (r.status === 'login' ? 'needs a login' : r.message || r.status);
   const notices = [];
@@ -83,7 +91,7 @@ export function withPresentation(status, headless, canLogIn = new Set(), now = n
     if (staleIds.has(id) || r.status === 'ok' || r.status === 'skipped') continue;
     notices.push(r.status === 'login'
       ? { provider: id, kind: 'login', text: `${name(id)} needs a login`, canLogIn: canLogIn.has(id) }
-      : { provider: id, kind: 'error', text: `${name(id)}: ${reason(r)}`, canLogIn: false }); // logging in won't fix a page error
+      : { provider: id, kind: 'error', text: `${name(id)}: ${reason(r)}`, canLogIn: canLogIn.has(id) }); // let the user inspect the browser session even when detection missed a login
   }
 
   // 3. Every meter with a reset time, soonest first (UIs show the first N).
@@ -94,5 +102,10 @@ export function withPresentation(status, headless, canLogIn = new Set(), now = n
     })))
     .sort((a, b) => Date.parse(a.resetsAt) - Date.parse(b.resetsAt));
 
-  return { ...status, providers: status.providers.map((p) => ({ ...p, planLabel: planLabel(p.plan) })), notices, resetsNext };
+  return { ...status, providers: providers.map((p) => ({ ...p, planLabel: planLabel(p.plan),
+    canOpenBrowser: canLogIn.has(p.id), actionLabel: canLogIn.has(p.id) ? 'Open browser' : null,
+    emptyText: p.meters.length ? null : waitingForBrowser ? refreshMessage
+      : results[p.id]?.status === 'login' ? 'No usage reading yet. Open the browser to sign in, then quit that window with Cmd+Q to refresh.'
+      : 'No usage reading yet. Open the browser to check your session, then quit that window with Cmd+Q to refresh.',
+  })), notices: notices.map((n) => ({ ...n, actionLabel: n.canLogIn ? 'Open browser' : null })), resetsNext, refreshMessage };
 }

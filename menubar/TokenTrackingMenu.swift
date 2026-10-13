@@ -182,6 +182,7 @@ enum MenuBarGlyphs {
         ("cursor", "cursorarrow", "Cursor", { p, m in p == "cursor" && m != "grok-bot" }),
         ("antigravity", "arrow.up.circle", "Antigravity", { p, _ in p == "antigravity" }),
         ("grok-bot", "xmark", "Grok Bot", { p, m in p == "cursor" && m == "grok-bot" }),
+        ("openai", "openai.knot", "OpenAI", { p, _ in p == "openai" }),
         ("muse", "m.circle", "Muse", { p, _ in p == "muse" }),
     ]
 
@@ -193,6 +194,34 @@ enum MenuBarGlyphs {
         return n < 10 ? "\(n)\u{2007}" : String(n) // pad after, so the digit stays next to its icon
     }
 
+    /// Local vector knot: six interlocking loops distinguish OpenAI from generic AI sparkles.
+    /// Drawn in code so menu bar tinting and Retina scaling need no downloaded assets.
+    static func openAIIcon() -> NSImage {
+        NSImage(size: NSSize(width: 14, height: 14), flipped: false) { _ in
+            NSColor.black.setStroke()
+            for i in 0..<6 {
+                let path = NSBezierPath()
+                path.move(to: NSPoint(x: 7, y: 2))
+                path.curve(to: NSPoint(x: 12, y: 5), controlPoint1: NSPoint(x: 10, y: 0.6), controlPoint2: NSPoint(x: 12.5, y: 2.5))
+                path.line(to: NSPoint(x: 12, y: 7.4))
+                path.line(to: NSPoint(x: 7, y: 10.3))
+                path.line(to: NSPoint(x: 4.9, y: 9.1))
+                path.line(to: NSPoint(x: 9.9, y: 6.2))
+                let transform = AffineTransform(translationByX: -7, byY: -7)
+                path.transform(using: transform)
+                var rotation = AffineTransform()
+                rotation.rotate(byDegrees: CGFloat(i) * 60)
+                path.transform(using: rotation)
+                path.transform(using: AffineTransform(translationByX: 7, byY: 7))
+                path.lineWidth = 0.9
+                path.lineJoinStyle = .round
+                path.lineCapStyle = .round
+                path.stroke()
+            }
+            return true
+        }
+    }
+
     /// Draw icons and digits in black on a transparent image and mark it as a template, so macOS
     /// tints it for light/dark menu bars and the pressed state, like any other menu bar icon.
     static func image(for slots: [MenuSlot]) -> NSImage {
@@ -201,7 +230,7 @@ enum MenuBarGlyphs {
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
         let height: CGFloat = 18, iconGap: CGFloat = 1.5, slotGap: CGFloat = 6
         let parts = slots.map { slot -> (NSImage?, NSAttributedString) in
-            (NSImage(systemSymbolName: slot.symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config),
+            (slot.symbol == "openai.knot" ? openAIIcon() : NSImage(systemSymbolName: slot.symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config),
              NSAttributedString(string: slot.text, attributes: attrs))
         }
         let width = parts.reduce(CGFloat(0)) { w, p in w + (p.0?.size.width ?? 0) + iconGap + p.1.size().width } + slotGap * CGFloat(max(0, parts.count - 1))
@@ -229,6 +258,7 @@ enum MenuBarGlyphs {
 struct Status: Decodable {
     struct Provider: Decodable, Identifiable {
         let id: String; let name: String; let planLabel: String?; let meters: [Meter]
+        let emptyText: String?; let canOpenBrowser: Bool?; let actionLabel: String?
     }
     struct Meter: Decodable, Identifiable {
         let id: String; let label: String; let window: String; let usedPercent: Double?
@@ -238,7 +268,7 @@ struct Status: Decodable {
     struct Headless: Decodable { let nextAt: String? }
     /// Built by the service (server/src/status.js withPresentation) so the web dashboard and this panel
     /// show the same notices and resets without duplicating the rules.
-    struct Notice: Decodable { let provider: String; let kind: String; let text: String; let canLogIn: Bool }
+    struct Notice: Decodable { let provider: String; let kind: String; let text: String; let canLogIn: Bool; let actionLabel: String? }
     struct Reset: Decodable {
         let provider: String; let providerName: String; let meterId: String; let label: String
         let usedPercent: Double?; let resetsAt: String; let status: String; let stale: Bool
@@ -247,6 +277,7 @@ struct Status: Decodable {
     let headless: Headless?
     let notices: [Notice]
     let resetsNext: [Reset]
+    let refreshMessage: String?
 }
 
 /// ISO-8601 with or without fractional seconds (the service sends milliseconds).
@@ -279,6 +310,7 @@ final class StatusModel: ObservableObject {
     @Published var symbol = "gauge.with.dots.needle.0percent"
     @Published var reachable = true
     @Published var refreshing = false
+    @Published var refreshError: String?
     @Published var menuBarHidden = false
     /// Latest /api/status, rendered natively by PanelView. (The panel used to be a WKWebView of the
     /// dashboard, but after the Mac slept it often drew nothing at all, even when recreated: 2026-10-11.)
@@ -319,7 +351,13 @@ final class StatusModel: ObservableObject {
         var lines: [String] = []
         slots = MenuBarGlyphs.services.compactMap { svc in
             let ms = s.providers.flatMap { p in p.meters.filter { svc.matches(p.id, $0.id) } }
-            guard !ms.isEmpty else { return nil }
+            // Show OpenAI as soon as the app is installed, even before the first successful refresh.
+            // Its placeholder makes the missing reading visible instead of silently hiding the slot.
+            if ms.isEmpty {
+                guard svc.id == "openai" else { return nil }
+                lines.append("\(svc.name): no reading")
+                return MenuSlot(symbol: svc.symbol, text: "??")
+            }
             guard let worst = ms.compactMap({ m in m.usedPercent.map { (m, $0) } }).max(by: { $0.1 < $1.1 }) else {
                 lines.append("\(svc.name): no reading")
                 return MenuSlot(symbol: svc.symbol, text: "??")
@@ -352,8 +390,12 @@ final class StatusModel: ObservableObject {
 
     func refreshNow() async {
         refreshing = true
-        _ = try? await post("api/refresh", body: "{}", timeout: 180)
-        refreshing = false
+        refreshError = nil
+        defer { refreshing = false }
+        do {
+            let (_, res) = try await post("api/refresh", body: "{}", timeout: 180)
+            if (res as? HTTPURLResponse)?.statusCode != 200 { refreshError = "Refresh failed. Check the service and try again." }
+        } catch { refreshError = "Refresh failed: \(error.localizedDescription)" }
         poll()
     }
 
@@ -364,7 +406,7 @@ final class StatusModel: ObservableObject {
             let (data, res) = try await post("api/login", body: "{\"provider\":\"\(provider)\"}", timeout: 10)
             let ok = (res as? HTTPURLResponse)?.statusCode == 200
             let reason = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["reason"] as? String
-            loginNote[provider] = ok ? "Log in, then quit that window (⌘Q). It refreshes automatically." : (reason ?? "Couldn't open the login window.")
+            loginNote[provider] = ok ? "Check your login, then quit that window (⌘Q). It refreshes automatically." : (reason ?? "Couldn't open the browser.")
         } catch { loginNote[provider] = "The service isn't reachable." }
     }
 
@@ -412,7 +454,8 @@ struct PanelView: View {
                         header(s)
                         notices(s)
                         resetsNext(s)
-                        ForEach(s.providers) { ProviderCard(provider: $0) }
+                        if let message = model.refreshError ?? s.refreshMessage { Text(message).font(.callout).foregroundStyle(.orange) }
+                        ForEach(s.providers) { ProviderCard(provider: $0, model: model) }
                     }
                     .padding(14)
                 }
@@ -468,11 +511,11 @@ struct PanelView: View {
     /// Notices come ready-made from the service (same as the web dashboard).
     @ViewBuilder private func notices(_ s: Status) -> some View {
         ForEach(Array(s.notices.enumerated()), id: \.offset) { _, n in
-            notice(id: n.provider, color: n.kind == "login" ? .red : n.kind == "error" ? .orange : .secondary, text: n.text, canLogIn: n.canLogIn)
+            notice(id: n.provider, color: n.kind == "login" ? .red : n.kind == "error" ? .orange : .secondary, text: n.text, canLogIn: n.canLogIn, actionLabel: n.actionLabel)
         }
     }
 
-    private func notice(id: String, color: Color, text: String, canLogIn: Bool) -> some View {
+    private func notice(id: String, color: Color, text: String, canLogIn: Bool, actionLabel: String?) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Circle().fill(color).frame(width: 8, height: 8).padding(.top, 5)
             VStack(alignment: .leading, spacing: 4) {
@@ -480,8 +523,9 @@ struct PanelView: View {
                 if let note = model.loginNote[id] { Text(note).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer(minLength: 4)
-            if canLogIn, model.loginNote[id] == nil {
-                Button("Log in") { Task { await model.logIn(id) } }.controlSize(.small)
+            if canLogIn {
+                Button(actionLabel ?? "Open browser") { Task { await model.logIn(id) } }.controlSize(.small)
+                    .disabled(model.loginNote[id] == "Opening…")
             }
         }
         .padding(10)
@@ -515,6 +559,7 @@ struct PanelView: View {
 
 struct ProviderCard: View {
     let provider: Status.Provider
+    @ObservedObject var model: StatusModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -524,6 +569,14 @@ struct ProviderCard: View {
                 Spacer()
             }
             ForEach(provider.meters) { MeterRow(meter: $0) }
+            if provider.meters.isEmpty {
+                Text(provider.emptyText ?? "No usage reading yet.").font(.callout).foregroundStyle(.secondary)
+                if provider.canOpenBrowser == true {
+                    Button(provider.actionLabel ?? "Open browser") { Task { await model.logIn(provider.id) } }.controlSize(.small)
+                        .disabled(model.loginNote[provider.id] == "Opening…")
+                    if let note = model.loginNote[provider.id] { Text(note).font(.caption).foregroundStyle(.secondary) }
+                }
+            }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))

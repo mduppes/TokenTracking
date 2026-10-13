@@ -3,7 +3,15 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- Browser providers now have dashboard and panel cards before their first stored reading, with an Open browser action. Skipped refreshes explain when the dedicated Chrome window must be quit with Cmd+Q.
+- OpenAI menu bar slot uses a locally drawn six-loop knot instead of the generic sparkle, still positioned after Grok Bot.
+- **Open browser** on browser-provider warnings, including scraping errors, in the dashboard and native panel. The button stays available for retries; closing the dedicated browser refreshes that provider automatically.
+- **OpenAI (ChatGPT)** usage page support: the dedicated Chrome profile opens the usage overview and reads its rendered percentage meters with the shared DOM scraper. Added OpenAI to the dashboard, login flow and menu bar. Signed-in meter details still need end-to-end verification.
+- Menu bar shows OpenAI as `??` until its first reading is stored, so the new slot is visible before the first successful refresh.
 ### Fixed
+- Refresh failures are surfaced in both UIs, and the service returns HTTP 500 for failed refreshes instead of reporting success.
+- OpenAI guest pages saying **Log in** now count as logged out, so they offer a login notice rather than a generic scraping error.
 - **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.
 ### Changed
 - **One source for presentation:** `/api/status` now includes `notices`, `resetsNext` and `providers[].planLabel` (`withPresentation` in `status.js`, unit-tested). The web dashboard and the menu bar panel both render them as-is instead of each re-deriving them, so they can't drift apart.

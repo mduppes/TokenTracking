@@ -3,6 +3,8 @@
 Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
+- [ ] **OpenAI:** finish meter-layout verification and add a redacted DOM fixture. A signed-in capture on 2026-10-13 stored 5-hour and weekly limits plus a generic "Usage remaining" meter; check whether the generic row duplicates the 5-hour pool and normalize it if so. Browser errors offer Open browser to inspect the session.
+- [ ] **Icons:** update Muse and Antigravity menu bar glyphs; requested alongside OpenAI's knot icon, deferred when the user asked to push the current work.
 - [ ] **Watch headless for a few days** for bot blocks or session expiry; tune the interval if needed.
 - [ ] **Claude multi-org picker** (config or dashboard setting).
 - [ ] **"X of Y" parsing** in `scrape-dom.js`, for pages that show counts rather than percentages.
@@ -12,7 +14,7 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## More AI services (backlog)
 Candidates, to be checked for a usage page or local source first. Same rules as the others: read in-page with the headless profile, no API keys.
-- [ ] **OpenAI: ChatGPT** (Plus/Pro message and model limits) and **Codex** (5h + weekly limits; the Codex CLI also logs usage locally). Check chatgpt.com settings for a usage view.
+- [ ] **OpenAI Codex:** investigate any limits not exposed by the usage overview; ChatGPT page verification is tracked under Next.
 - [ ] **GitHub Copilot**: premium-request allowance per month (github.com billing/usage pages).
 - [ ] **Perplexity**: Pro search / research limits.
 - [ ] **Windsurf** and **Kiro**: credit-based plans with dashboards.

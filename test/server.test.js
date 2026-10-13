@@ -9,6 +9,7 @@ import { openDb } from '../server/src/db.js';
 import { createApp } from '../server/src/server.js';
 
 let server, db, home, port, refreshCalls = 0;
+let refreshOutcome = { at: 'now', results: {} };
 
 before(async () => {
   home = mkdtempSync(join(tmpdir(), 'tt-test-'));
@@ -20,7 +21,7 @@ before(async () => {
   port = probe.address().port;
   await new Promise((r) => probe.close(r));
   config.port = port;
-  server = createApp({ db, config, refresh: async () => { refreshCalls++; return { at: 'now', results: {} }; } });
+  server = createApp({ db, config, refresh: async () => { refreshCalls++; if (refreshOutcome === 'throw') throw new Error('Chrome launch failed'); return refreshOutcome; } });
   await new Promise((r) => server.listen(port, '127.0.0.1', r));
 
   const resetsAt = new Date(Date.now() + 2 * 36e5).toISOString();
@@ -77,4 +78,14 @@ test('serves dashboard, blocks traversal', async () => {
   assert.equal(r.status, 200);
   assert.match(r.body, /TokenTracking/);
   assert.equal((await call('GET', '/../package.json')).status, 404);
+});
+
+test('refresh failures return HTTP 500 rather than a successful response', async () => {
+  const headers = { 'content-type': 'application/json' };
+  try {
+    refreshOutcome = null;
+    assert.equal((await call('POST', '/api/refresh', { body: {}, headers })).status, 500);
+    refreshOutcome = 'throw';
+    assert.equal((await call('POST', '/api/refresh', { body: {}, headers })).status, 500);
+  } finally { refreshOutcome = { at: 'now', results: {} }; }
 });

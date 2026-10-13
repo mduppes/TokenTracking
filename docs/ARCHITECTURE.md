@@ -10,7 +10,7 @@
                                                               │ spawn, CDP over --remote-debugging-pipe
                                                               ▼
                                    Google Chrome --headless (own profile ~/.tokentracking/browser-profile)
-                                   claude.ai · cursor.com · gemini.google.com · muse.ai  → quits after the run
+                                   claude.ai · cursor.com · chatgpt.com · gemini.google.com · muse.ai  → quits after the run
 ```
 
 ## Components
@@ -70,8 +70,9 @@ An AppKit `NSStatusItem` with an `NSPopover` hosting SwiftUI content, built with
 ## One source of truth, two renderers
 
 `GET /api/status` is the single source for every UI. Besides the raw providers and meters (with pace and `stale`), the service adds **presentation fields** in `withPresentation()` (`server/src/status.js`):
-- `notices[]`: `{ provider, kind: stale | login | error, text, canLogIn }`. Stale services come first, with the last refresh's reason. Services that are `skipped` (e.g. Antigravity not running) get no notice. `canLogIn` is false for page errors.
+- `notices[]`: `{ provider, kind: stale | login | error, text, canLogIn, actionLabel }`. Stale services come first, with the last refresh's reason. Services that are `skipped` (e.g. Antigravity not running) get no notice. Browser providers offer **Open browser** on all warnings, including page errors, so the user can inspect their session and log in if needed. Local-only providers have no browser action. The button stays available after an attempt so failures can be retried.
 - `resetsNext[]`: every meter with a reset time, soonest first. UIs show the first N.
+- Registered browser providers have an empty card before their first reading (`emptyText`, `canOpenBrowser`, `actionLabel`), with no invented meter or snapshot. `refreshMessage` explains when browser reads were skipped because the login window is still open. Both UIs show HTTP/network refresh failures.
 - `providers[].planLabel`: "claude_max" becomes "Max".
 
 The web dashboard (`server/public/app.js`) and the menu bar panel (Swift `PanelView`) render these as-is. Only live countdowns are computed client-side, from `resetsAt`, because they tick. **To change wording or rules, edit `withPresentation` (tested in `test/presentation.test.js`), not the UIs.**

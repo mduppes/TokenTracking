@@ -10,6 +10,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 | Cursor | `https://cursor.com/dashboard/spending` | In-page `GET /api/usage-summary` → `parseCursorUsage` | Monthly: included total, Cursor models, other models, on-demand $ if enabled | ✅ 2026-10-10 |
 | Grok Bot (Cursor) | same page | In-page `POST /api/dashboard/get-sand-usage-status` `{}` → `parseCursorGrokBot` | Weekly | ✅ 2026-10-10 |
 | Gemini (app) | `https://gemini.google.com/usage` | DOM: `scrape-dom.js` ("NN% used" text) | "Current usage" (short rolling window) + "Weekly limit" | ✅ 2026-10-10 |
+| OpenAI (ChatGPT) | `https://chatgpt.com/settings/usage?tab=overview` | DOM: `scrape-dom.js` on the rendered usage overview | 5-hour, weekly, plus a generic "Usage remaining" row under review | ⏳ signed-in capture observed 2026-10-13; meter layout verification pending |
 | Muse (Meta) | `https://muse.ai/` | DOM: `MUSE_OPEN_STEPS` (menu → Settings), then the dialog's ARIA progress bar | Weekly limit for the plan | ✅ 2026-10-10 |
 | Antigravity | none on the web; desktop app must be running | Local language server `GetUserStatus` (127.0.0.1, CSRF token from its process args; ADR-011) → `parseAntigravityStatus` | One meter per quota pool, e.g. "Claude + GPT-OSS models" (weekly), "Gemini models" (~5h) | ✅ 2026-10-10 |
 
@@ -21,6 +22,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 | Cursor | redirect to `authenticator.cursor.sh` |
 | Gemini | redirect to `/app` with "Sign in" |
 | Muse | same URL, page text "Log in or create an account" |
+| OpenAI | auth redirect, or guest page on `chatgpt.com` with **Log in** / **Sign in** and no usage section |
 
 ## Notes per provider
 
@@ -53,6 +55,15 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
   - "Weekly limit · Resets Oct 13 at 1:19 AM · 0% used"
 - The visual bar has no ARIA value or %-width, so the scraper keys off the **text**. An "info" icon ligature in the label row is filtered out.
 - "Current usage" is classified as `session` (5 h). The real window length isn't documented, so the even-pace marker may be off.
+
+### OpenAI (ChatGPT)
+- The user-provided usage overview is `https://chatgpt.com/settings/usage?tab=overview`.
+- The task reads the rendered page through the shared DOM scraper in the dedicated Chrome profile. It does not call private endpoints or inspect browser credentials.
+- The page's current meter labels, reset wording, and signed-in behavior still need end-to-end verification with the user's ChatGPT subscription. Meters are only recorded when the page exposes a percentage or valued progress bar recognized by `scrape-dom.js`.
+- Browser warnings offer **Open browser** even when the task reports an error, so the user can inspect the dedicated profile's session. Quit that window with Cmd+Q to trigger another refresh.
+- The dashboard and native panel show an empty OpenAI card even before its first reading. If the login browser remains open, refresh reports that it skipped browser usage and asks the user to quit that Chrome window with Cmd+Q.
+- **Verified guest state (2026-10-13):** the dedicated profile redirects to `/` on `chatgpt.com`, displays a Log in button, and exposes no progress bars or meters.
+- **Signed-in capture (2026-10-13):** stored 5-hour and weekly limits with reset times, plus a generic "Usage remaining" row. That generic row may duplicate the 5-hour meter; verify the rendered layout and add a redacted fixture before calling the meter mapping fully verified.
 
 ### Muse (Meta)
 - Usage sits in **Settings → General → Usage**, a dialog with no URL of its own:

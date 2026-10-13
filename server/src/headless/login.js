@@ -10,6 +10,7 @@ export const LOGIN_URLS = {
   cursor: 'https://cursor.com/dashboard/spending',
   gemini: 'https://gemini.google.com/usage',
   muse: 'https://muse.ai/',
+  openai: 'https://chatgpt.com/settings/usage?tab=overview',
 };
 
 /**
