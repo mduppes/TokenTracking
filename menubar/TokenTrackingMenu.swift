@@ -8,7 +8,7 @@ let baseURL = URL(string: ProcessInfo.processInfo.environment["TOKENTRACKING_URL
 
 // MARK: - Local service ownership
 // The app is the only thing the user runs: if the Node service isn't already up, start it as a child
-// process (paths baked in at build time, see BuildConfig.swift) and stop it again on quit.
+// process (bundle-relative paths in releases, see BuildConfig.swift) and stop it again on quit.
 @MainActor
 final class ServiceRunner {
     static let shared = ServiceRunner()

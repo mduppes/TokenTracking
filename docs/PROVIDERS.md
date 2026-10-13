@@ -2,6 +2,8 @@
 
 All providers are read by the headless refresher (`server/src/headless/refresh.js`, `TASKS`), from inside each provider's own site, using the dedicated logged-in Chrome profile.
 
+Mac packaging check (2026-10-13): the release bundles the same provider readers; no live provider reads were rerun for distribution. Verification dates below remain the dates of actual provider checks.
+
 Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 
 | Provider | Page loaded | How usage is read | Meters | Status |

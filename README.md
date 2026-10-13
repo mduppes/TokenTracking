@@ -44,7 +44,21 @@ No API keys, no accounts, no cloud, no browser extension.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
 - **Stale and login notices with a Log in button.** Services whose data is stale (missed about 2 refreshes) or whose login expired are listed at the top with the reason. **Log in** opens the TokenTracking browser on that service; quit it (⌘Q) when you're done and that service refreshes automatically.
 
-## Quick start
+## Download for Mac
+
+[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.1/TokenTracking-0.6.0-preview.1-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.1/TokenTracking-0.6.0-preview.1-x64.dmg)
+
+Requires **macOS 13+** and **Google Chrome**. Node and the local service are included; no terminal, Git or Xcode tools needed.
+
+1. Download the DMG for your Mac (Apple menu → About This Mac shows **Chip** for Apple Silicon, **Processor** for Intel).
+2. Open the DMG and drag **TokenTracking** to **Applications**. Launch it from Applications.
+3. Click **Open browser** on each provider you use, log in, then quit the dedicated Chrome window with **Cmd+Q**. That provider refreshes automatically. If needed, enable TokenTracking in **System Settings → Menu Bar**.
+
+**Preview release:** these downloads are ad-hoc signed, without Apple Developer ID signing or notarization. macOS may block the first launch. After attempting to open the app, use **System Settings → Privacy & Security → Open Anyway** if you choose to trust this build. Do not disable Gatekeeper. Fully signed downloads are planned; see [release packaging](docs/RELEASING.md).
+
+To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
+
+## Build from source
 
 Requirements: macOS 13+, Node.js ≥ 22.13 (for the built-in `node:sqlite`), Google Chrome, and the Xcode command line tools (for `swiftc`). There are no npm dependencies, so there's nothing to install.
 
@@ -102,6 +116,7 @@ TOKENTRACKING_HOME=.tokentracking-demo TOKENTRACKING_HEADLESS=0 npm start
 
 | Command | What it does |
 |---|---|
+| `npm run build:release -- arm64` / `-- x64` | Build a self-contained Mac DMG (downloads a verified Node runtime) |
 | `npm run build:menubar` | Build the macOS menu bar app into `build/TokenTracking.app` |
 | `npm run browser-login` | Open the headless profile in a normal window to log in (`-- gemini` for one service) |
 | `npm run refresh` | Run one headless refresh now and print results (`-- claude muse` for some) |

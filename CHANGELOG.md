@@ -4,6 +4,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 ### Added
+- Self-contained Apple Silicon and Intel Mac DMG builds with checksum-verified bundled Node, relocatable service paths, download/install instructions, and optional Developer ID signing/notarization tooling (ADR-012). Initial downloads are explicitly labelled unsigned previews.
 - Browser providers now have dashboard and panel cards before their first stored reading, with an Open browser action. Skipped refreshes explain when the dedicated Chrome window must be quit with Cmd+Q.
 - OpenAI menu bar slot uses a locally drawn six-loop knot instead of the generic sparkle, still positioned after Grok Bot.
 - **Open browser** on browser-provider warnings, including scraping errors, in the dashboard and native panel. The button stays available for retries; closing the dedicated browser refreshes that provider automatically.

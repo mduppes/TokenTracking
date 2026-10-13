@@ -35,6 +35,7 @@ docs/                 ARCHITECTURE, PROVIDERS, SECURITY, DECISIONS, ROADMAP
 npm test                                     # must pass before you finish
 npm run refresh [-- muse]                    # one headless refresh now, prints per-service results
 npm run browser-login [-- gemini]            # (user) log in once in the headless profile, then Cmd+Q
+npm run build:release -- arm64               # self-contained DMG (or -- x64); docs/RELEASING.md
 npm run build:menubar && open build/TokenTracking.app   # menu bar app (starts the service itself)
 npm start                                    # service alone on :7878 (~/.tokentracking)
 npm run status                               # terminal view

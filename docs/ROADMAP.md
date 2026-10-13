@@ -3,6 +3,7 @@
 Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
+- [ ] **Mac distribution:** sign and notarize downloads with Developer ID before promoting the unsigned preview to a stable release. Verify first-launch Gatekeeper and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
 - [ ] **OpenAI:** finish meter-layout verification and add a redacted DOM fixture. A signed-in capture on 2026-10-13 stored 5-hour and weekly limits plus a generic "Usage remaining" meter; check whether the generic row duplicates the 5-hour pool and normalize it if so. Browser errors offer Open browser to inspect the session.
 - [ ] **Icons:** update Muse and Antigravity menu bar glyphs; requested alongside OpenAI's knot icon, deferred when the user asked to push the current work.
 - [ ] **Watch headless for a few days** for bot blocks or session expiry; tune the interval if needed.
@@ -23,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] Menu bar: let the user choose which services get a slot (today it's the `MenuBarGlyphs.services` list in the Swift app).
 
 ## Done
+- [x] Self-contained Mac DMG packaging and README download/install instructions for Apple Silicon and Intel (2026-10-13; preview signing).
 - [x] Headless refresh verified for Claude, Cursor + Grok Bot, Gemini, Muse (2026-10-10)
 - [x] macOS menu bar app that starts and stops the service; Dock fallback when the menu bar is full (2026-10-10)
 - [x] Chrome extension removed (ADR-010, 2026-10-10)

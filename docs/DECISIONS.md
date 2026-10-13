@@ -120,3 +120,9 @@ It doesn't attempt deeper fingerprint spoofing.
 - It can be disabled with `TOKENTRACKING_HEADLESS_SKIP=antigravity`.
 - No other credential reading is allowed without a new ADR.
 **Consequences.** Antigravity quotas are tracked whenever the app is open, with no logins and no Chrome. The endpoint is internal and undocumented, so it can change with app updates (the version seen here was 2.22.0).
+
+## ADR-012: Self-contained Mac downloads (2026-10-13)
+
+**Context.** The user requested prebuilt Mac downloads. Source builds embed the builder's project and Node paths, which do not work on another Mac.
+**Decision.** Release builds bundle the unchanged zero-dependency service and an official standalone Node runtime, pinned by version and SHA-256 for arm64 and x64. Swift resolves resources relative to its bundle. Package each architecture as a DMG with an Applications shortcut, distributed through GitHub Releases. Source builds keep their existing workflow.
+**Consequences.** Download users need macOS 13+ and Chrome, but no Node, Git or compiler. Node's license ships with the app. Only allow-listed application files ship; profiles, databases and captured payloads never do. Downloading build tools and publishing software are explicit maintainer actions; the runtime still sends no telemetry or usage data off the machine. Preview builds are clearly labelled ad-hoc signed; normal public distribution needs Developer ID signing and Apple notarization. Runtime updates require a new build and checksum review. Signing/notarization credentials are supplied by the publisher's tooling, never read by application code.
