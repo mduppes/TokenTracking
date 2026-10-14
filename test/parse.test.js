@@ -134,6 +134,23 @@ test('Muse limit notice → 100% weekly meter with reset time', () => {
   assert.equal(parseMuseLimitNotice('nothing here'), null);
 });
 
+test('Muse ignores an old exhausted notice after its weekly reset instead of rolling it into next year', () => {
+  const text = "You've reached your usage limit. Your full weekly usage will reset at 1:36 AM on Wednesday, October 14.";
+  assert.equal(parseMuseLimitNotice(text, new Date(2026, 9, 14, 1, 36)), null);
+  assert.equal(parseMuseLimitNotice(text, new Date(2026, 9, 14, 6, 0)), null);
+  assert.equal(parseMuseLimitNotice(text, new Date(2026, 9, 15, 6, 0)), null);
+});
+
+test('Muse requires a known future reset within seven days for an exhausted notice', () => {
+  const now = new Date(2026, 9, 14, 6, 0);
+  const notice = (date) => `You've reached your usage limit. Your full weekly usage will reset on ${date}.`;
+  assert.equal(parseMuseLimitNotice(notice('an unknown date'), now), null);
+  assert.equal(parseMuseLimitNotice(notice('October 13, 2026'), now), null);
+  assert.equal(parseMuseLimitNotice(notice('October 22'), now), null);
+  assert.equal(parseMuseLimitNotice(notice('October 21 at 6:00 AM'), now).usedPercent, 100);
+  assert.equal(parseMuseLimitNotice(notice('January 2 at 6:00 AM'), new Date(2026, 11, 30, 6, 0)).usedPercent, 100);
+});
+
 test('Antigravity: an exhausted pool omits remainingFraction (real shape, 2026-10-12) and counts as 100% used', () => {
   const now = new Date('2026-10-12T12:00:00Z');
   const { meters } = parseAntigravityStatus({ userStatus: { cascadeModelConfigData: { clientModelConfigs: [

@@ -17,7 +17,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 | Grok Bot (Cursor) | same page | In-page `POST /api/dashboard/get-sand-usage-status` `{}` → `parseCursorGrokBot` | Weekly | ✅ 2026-10-10 |
 | Gemini (app) | `https://gemini.google.com/usage` | DOM: `scrape-dom.js` ("NN% used" text) | "Current usage" (short rolling window) + "Weekly limit" | ✅ 2026-10-10 |
 | OpenAI (ChatGPT) | `https://chatgpt.com/settings/usage?tab=overview` | DOM: `scrape-dom.js` on the rendered usage overview | 5-hour, weekly, plus a generic "Usage remaining" row under review | ⏳ signed-in capture observed 2026-10-13; meter layout verification pending |
-| Muse (Meta) | `https://muse.ai/` | DOM: `MUSE_OPEN_STEPS` (menu → Settings), then the dialog's ARIA progress bar | Weekly limit for the plan | ✅ 2026-10-10 |
+| Muse (Meta) | `https://muse.ai/` | DOM: `MUSE_OPEN_STEPS` (menu → Settings), then the dialog's ARIA progress bar | Weekly limit for the plan | ✅ 2026-10-10; 2026-10-14: expired-notice fix live verified, warmup wait fixture verified; live warmup monitoring pending |
 | Antigravity | none on the web; desktop app must be running | Local language server `GetUserStatus` (127.0.0.1, CSRF token from its process args; ADR-011) → `parseAntigravityStatus` | One meter per quota pool, e.g. "Claude + GPT-OSS models" (weekly), "Gemini models" (~5h) | ✅ 2026-10-10 |
 
 **Logged-out detection** (`loggedOut(href, text)`), as observed 2026-10-10:
@@ -83,12 +83,13 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 - **Two gotchas**, both handled in `scrape-dom.js`:
   - The menu opens on **pointerdown**, so a full pointer/mouse press is dispatched (not `el.click()`).
   - The item's text is "Settings\n⌘,", so text matching uses the **first line**.
-- **Slow agent connection (2026-10-11):** after load, the agent shows "Connecting…", sometimes for minutes, and possibly never while you're out of tokens. Until it connects, Settings → General has **no Usage section**. The task:
-  1. waits for the app shell (`hatch-dock-more`), then 3 s, then up to 2 min for "Connecting…" to clear;
-  2. if it connected, reads the Usage bar;
-  3. otherwise, falls back to the chat notice "You've reached your usage limit … Your full weekly usage will reset at 1:36 AM on Wednesday, October 14." (`parseMuseLimitNotice`: 100%, with the reset time);
-  4. otherwise reports an `error` ("still connecting") that retries next refresh.
+- **Slow agent connection / warmup (2026-10-11, updated 2026-10-14):** after load, the agent shows "Connecting…" or “is warming up” (confirmed by the user’s screenshot), sometimes for minutes. Settings → General may have **no Usage section**, even after the status label disappears. The task:
+  1. polls for up to three minutes, waiting for visible warmup/connection labels to clear before opening Settings;
+  2. continues polling the Usage bar within that allowance, even when no loading label remains, and records a rendered 0% normally;
+  3. only at timeout considers the chat notice "You've reached your usage limit … Your full weekly usage will reset at …" (`parseMuseLimitNotice`: 100%, strictly future reset within seven days);
+  4. otherwise reports a loading `error`, preserving the last confirmed reading and retrying next refresh. Fake-clock tests cover multi-minute transitions, missing usage, timeout, stale notices and context reloads; a real-Chrome fixture verifies the visible warming label and eventual zero meter. Live warmup duration remains under observation.
 - **Meter id:** `weekly` ("Weekly limit"). The bar's label is the plan name, which is reported as `plan` instead, so changing plans doesn't create a new meter. Older `free-plan` rows were migrated.
+- **Reset regression (2026-10-14):** post-reset DOM snapshots correctly recorded 0%, then historical chat notices replaced them with 100%. The generic date parser rolled the expired October 14 notice into next year. `parseMuseLimitNotice` now requires a known reset strictly in the future and no more than seven days away; invalid notices produce no snapshot, preserving the last confirmed usage. Regression tests include expired and unknown dates, the weekly bound and New Year. Live Settings → General currently sometimes omits Usage even without “Connecting…”; that reports usage unavailable and retries, rather than declaring the old chat notice current or inventing a zero reading.
 
 ### Antigravity
 - **Process.** `…/Antigravity.app/Contents/Resources/bin/language_server --standalone --override_ide_name antigravity --subclient_type hub --https_server_port 0 --csrf_token <token> …` (app 2.22.0). The port is random, so it's found with `lsof`. It listens on two ports; the first answers HTTPS.

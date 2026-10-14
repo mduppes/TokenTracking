@@ -47,7 +47,7 @@ Flow per run:
 1. Skip if there's no profile yet, or if the `browser-login` window is open (the profile is locked).
 2. Launch Chrome and build the identity.
 3. For each task, open a page, navigate, wait 2.5 s, then check for a logged-out state.
-4. OpenAI bypasses the initial 2.5 s login check and polls its rendered usage for up to 60 s, reinjecting the scraper after authentication navigation. Only a confirmed login page at timeout produces a login notice; loading failures produce an error. Other providers use the initial login check. Run `read()`. API tasks use `fetch` in the page; DOM tasks inject `scrape-dom.js`, run `openSteps`, and poll `scrape()` for up to 25 s.
+4. OpenAI bypasses the initial 2.5 s login check and polls its rendered usage for up to 60 s, reinjecting the scraper after authentication navigation. Only a confirmed login page at timeout produces a login notice; loading failures produce an error. Other providers use the initial login check. Run `read()`. API tasks use `fetch` in the page; generic DOM tasks inject `scrape-dom.js`, run `openSteps`, and poll `scrape()` for up to 25 s. Muse's reader (`headless/muse.js`) polls for up to three minutes, waiting through visible “Connecting…” / “is warming up” states and missing Settings usage. Only after this wait does it consider an unexpired weekly limit notice; otherwise it reports a loading error and preserves the last snapshot.
 5. Store the snapshots and close the page.
 6. Quit Chrome (SIGKILL after 5 s if it lingers).
 

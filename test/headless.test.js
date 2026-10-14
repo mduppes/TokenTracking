@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_CHROME, launchChrome, openPage } from '../server/src/headless/chrome.js';
 import { normalizeDomMeters } from '../lib/parse.js';
+import { readMuseUsage } from '../server/src/headless/muse.js';
 
 const chromePath = process.env.TOKENTRACKING_CHROME || DEFAULT_CHROME;
 const skip = !existsSync(chromePath) && 'Google Chrome not installed';
@@ -65,4 +66,32 @@ test('openSteps reveal a Muse-style dialog, then the progress bar is read', { sk
   assert.equal(raw.length, 1);
   assert.deepEqual([raw[0].label, raw[0].percent, raw[0].resetText], ['Free plan', 95, 'Weekly limit resets on Oct 14']);
   assert.equal(normalizeDomMeters(raw)[0].window, 'weekly');
+});
+
+test('Muse reader waits for a visible warming-up state before opening Settings and reading zero', { skip }, async () => {
+  const page = await load(`<div id="warm"><span>☀</span><span>is warming up</span></div>${MUSE.replaceAll('95', '0')}`);
+  const evaluate = page.evaluate.bind(page);
+  const errors = [];
+  page.evaluate = async (...args) => {
+    try { return await evaluate(...args); } catch (e) { errors.push(e.message); throw e; }
+  };
+  let elapsed = 0;
+  try {
+    const result = await readMuseUsage(page, {
+      now: () => new Date(2026, 9, 10, 8, 0).getTime() + elapsed,
+      sleep: async (ms) => {
+        elapsed += ms;
+        if (elapsed === 140_000) {
+          assert.equal(await page.evaluate('document.getElementById("dlg").hidden'), true);
+          await page.evaluate('document.getElementById("warm").remove()');
+        }
+      },
+    });
+    assert.deepEqual(errors, []);
+    assert.equal(elapsed, 142_000);
+    assert.equal(result.meters[0].usedPercent, 0);
+    assert.equal(result.plan, 'Free plan');
+  } finally {
+    await page.close();
+  }
 });

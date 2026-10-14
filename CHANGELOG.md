@@ -17,6 +17,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - **OpenAI (ChatGPT)** usage page support: the dedicated Chrome profile opens the usage overview and reads its rendered percentage meters with the shared DOM scraper. Added OpenAI to the dashboard, login flow and menu bar. Signed-in meter details still need end-to-end verification.
 - Menu bar shows OpenAI as `??` until its first reading is stored, so the new slot is visible before the first successful refresh.
 ### Fixed
+- Muse refresh recognizes “is warming up” as well as “Connecting…” and waits up to three minutes for the Settings usage meter, including when loading has no visible status label. A timeout keeps the last confirmed reading for the next refresh.
+- Muse no longer overwrites post-reset usage with old chat limit notices: fallback readings require a known reset within the next seven days. Missing Settings usage is reported separately from a connection timeout.
 - Settings drag reordering works again on macOS: an in-panel drag gesture moves the whole row under the pointer and shifts neighboring rows on hover, replacing native drag/drop callbacks that were not moving rows. Verified upward and downward drags in the running app.
 - OpenAI no longer decides login from the initial 2.5-second guest shell: it waits up to 60 seconds for rendered usage, retries across authentication navigation, and distinguishes confirmed logout from loading errors. OpenAI-only signed-in refresh succeeded on 2026-10-13.
 - Refresh failures are surfaced in both UIs, and the service returns HTTP 500 for failed refreshes instead of reporting success.
