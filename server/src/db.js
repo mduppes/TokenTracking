@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
 `;
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function migrate(db) {
   const version = Number(db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get()?.value || 1);
@@ -44,6 +44,13 @@ function migrate(db) {
       db.exec(`UPDATE snapshots SET meter_id = 'pool-claude-gpt', label = 'Claude and GPT models'
         WHERE provider = 'antigravity' AND meter_id = 'pool-claude'`);
       db.exec(`DELETE FROM snapshots WHERE provider = 'antigravity' AND meter_id = 'pool-gpt-oss'`);
+    }
+    if (version < 4) {
+      // v4: Before Gemini 4 Argon got its own meter (pool-gemini-argon), its snapshots were grouped
+      // into pool-gemini whenever Argon had lower remaining tokens than Flash. Reassign those weekly
+      // Argon snapshots to pool-gemini-argon.
+      db.exec(`UPDATE snapshots SET meter_id = 'pool-gemini-argon', label = 'Gemini 4 Argon', window = 'weekly'
+        WHERE provider = 'antigravity' AND meter_id = 'pool-gemini' AND resets_at LIKE '2026-10-23T12:%'`);
     }
     db.prepare(`UPDATE meta SET value = ? WHERE key = 'schema_version'`).run(String(SCHEMA_VERSION));
     db.exec('COMMIT');
