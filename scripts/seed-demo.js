@@ -22,9 +22,9 @@ const meters = [
   { provider: 'cursor', id: 'auto', label: 'Cursor models', window: 'monthly', resetIn: 9 * 24 * H, end: 64 },
   { provider: 'gemini', id: 'current-usage', label: 'Current usage', window: 'session', resetIn: 2 * H, end: 1, staleBy: 3 * H }, // shows the stale notice
   { provider: 'cursor', id: 'grok-bot', label: 'Grok Bot', window: 'weekly', resetIn: 100 * H, end: 18 },
-  { provider: 'muse', id: 'weekly', label: 'Weekly limit', window: 'weekly', resetIn: 30 * H, end: 100 },
-  { provider: 'antigravity', id: 'pool-claude-gpt-oss', label: 'Claude + GPT-OSS models', window: 'weekly', resetIn: 118 * H, end: 51, plan: 'Pro' },
+  { provider: 'antigravity', id: 'pool-claude-gpt', label: 'Claude and GPT models', window: 'weekly', resetIn: 118 * H, end: 51, plan: 'Pro' },
   { provider: 'antigravity', id: 'pool-gemini', label: 'Gemini models', window: 'session', resetIn: 4 * H, end: 12 },
+  { provider: 'antigravity', id: 'pool-gemini-argon', label: 'Gemini 4 Argon', window: 'weekly', resetIn: 168 * H, end: 0 },
 ];
 const WIN_H = { session: 5, daily: 24, weekly: 168, monthly: 730 };
 

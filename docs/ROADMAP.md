@@ -34,7 +34,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [x] Headless refresh verified for Claude, Cursor + Grok Bot, Gemini, Muse (2026-10-10)
 - [x] macOS menu bar app that starts and stops the service; Dock fallback when the menu bar is full (2026-10-10)
 - [x] Chrome extension removed (ADR-010, 2026-10-10)
-- [x] Antigravity via its local language server (ADR-011, 2026-10-10)
+- [x] Antigravity via its local language server (ADR-011, 2026-10-10; updated with 3rd Gemini 4 Argon pool 2026-10-16)
 
 ## Cost per token / value of each subscription (user's follow-up request)
 Goal: "how much am I getting out of each subscription?"

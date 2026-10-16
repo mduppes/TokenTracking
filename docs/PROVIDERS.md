@@ -17,8 +17,7 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
 | Grok Bot (Cursor) | same page | In-page `POST /api/dashboard/get-sand-usage-status` `{}` → `parseCursorGrokBot` | Weekly | ✅ 2026-10-10 |
 | Gemini (app) | `https://gemini.google.com/usage` | DOM: `scrape-dom.js` ("NN% used" text) | "Current usage" (short rolling window) + "Weekly limit" | ✅ 2026-10-10 |
 | OpenAI (ChatGPT) | `https://chatgpt.com/settings/usage?tab=overview` | DOM: `scrape-dom.js` on the rendered usage overview | 5-hour, weekly, plus a generic "Usage remaining" row under review | ⏳ signed-in capture observed 2026-10-13; meter layout verification pending |
-| Muse (Meta) | `https://muse.ai/` | DOM: `MUSE_OPEN_STEPS` (menu → Settings), then the dialog's ARIA progress bar | Weekly limit for the plan | ✅ 2026-10-10; 2026-10-14: expired-notice fix live verified, warmup wait fixture verified; live warmup monitoring pending |
-| Antigravity | none on the web; desktop app must be running | Local language server `GetUserStatus` (127.0.0.1, CSRF token from its process args; ADR-011) → `parseAntigravityStatus` | The two groups shown in Antigravity's Settings: "Claude and GPT models" and "Gemini models" (fixed by model name) | ✅ 2026-10-15 |
+| Antigravity | none on the web; desktop app must be running | Local language server `GetUserStatus` (127.0.0.1, CSRF token from its process args; ADR-011) → `parseAntigravityStatus` | The three groups shown in Antigravity's Settings: "Claude and GPT models", "Gemini models", and "Gemini 4 Argon" (fixed by model name) | ✅ 2026-10-16 |
 
 **Logged-out detection** (`loggedOut(href, text)`), as observed 2026-10-10:
 
@@ -97,9 +96,9 @@ Status legend: ✅ verified end-to-end with headless · ⛔ not implemented.
   - headers: `content-type: application/json`, `connect-protocol-version: 1`, `x-codeium-csrf-token: <token>`
   - body: `{"metadata":{"ideName":"antigravity","extensionName":"antigravity","locale":"en"}}`
 - **Response.** `userStatus.cascadeModelConfigData.clientModelConfigs[]` = `{ label, modelOrAlias.model, quotaInfo: { remainingFraction (0–1), resetTime } }`, plus `userStatus.planStatus.planInfo.planName`. Models in the same pool report identical values.
-  - Observed pools: Claude Opus/Sonnet + GPT-OSS share a weekly pool; all Gemini models share a ~5h pool.
+  - Observed pools: Claude Opus/Sonnet + GPT-OSS share a weekly pool; Gemini Flash/Pro share a session/daily pool; Gemini 4 Argon has its own dedicated weekly pool.
 - **Exhausted pool (2026-10-12):** when a pool is fully used, `quotaInfo` has only `resetTime`; `remainingFraction` is omitted (zero values are left out of the JSON). The parser treats that as 0% remaining, i.e. 100% used. Models with no `quotaInfo` fields at all are ignored.
-- **Full pools look identical (2026-10-15):** after the Claude pool reset, every model reported `remainingFraction: 1` with the same rolling `resetTime` (now + 5h). The response has no pool id, so pools can't be told apart by value. The parser uses the same fixed groups as Antigravity's Settings instead: models whose label starts with "Gemini" vs everything else ("Claude and GPT models").
+- **Full pools look identical (2026-10-15, updated 2026-10-16):** after the Claude pool reset, every model reported `remainingFraction: 1` with the same rolling `resetTime` (now + 5h). The response has no pool id, so pools can't be told apart by value. The parser uses the same fixed groups as Antigravity's Settings instead: models with "Argon" in their label (`pool-gemini-argon`, "Gemini 4 Argon"), models whose label starts with "Gemini" (`pool-gemini`, "Gemini models"), and everything else (`pool-claude-gpt`, "Claude and GPT models").
 - **Window guess:** `session` if the reset is ≤6h away, `daily` if ≤26h, else `weekly`.
 - **"Antigravity IDE".** A separate app with no language server of its own was also running; only the "Antigravity" app's server is used.
 
