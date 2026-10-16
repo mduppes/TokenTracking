@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Clear local release staging apps, Node build caches and the screenshot preview; retain the development app and preview DMGs, and document safe build cleanup (2026-10-15; about 535 MB reclaimed).
 - [x] Muse warming-up detection and three-minute meter loading allowance, including missing usage with no visible loading label (2026-10-14; fixture verified).
 - [x] Reject expired Muse limit notices after weekly reset; regression tests cover next-year rollover, unknown dates, seven-day bounds and New Year (2026-10-14).
 - [x] Hosted Stripe support links and configurable creator links on the landing page (2026-10-13).

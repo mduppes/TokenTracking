@@ -21,6 +21,10 @@ Preview packages have ad-hoc signatures, **without Developer ID or Apple notariz
 
 Use a prerelease tag matching `package.json` (initially `v0.6.0-preview.1`). Upload both DMGs and checksum files to a GitHub prerelease, using `gh release create --prerelease --notes-file <file>`. Keep the README download links in sync with the tag and filenames. Quit the installed app before replacing it; the data directory persists.
 
+## Reclaim local build space
+
+After packaging and verification, `build/node-cache`, `build/release-arm64`, `build/release-x64` and `build/screenshot-preview` can be deleted. These are generated runtime caches, release staging apps and the demo preview; the next relevant build recreates them (release builds download Node again). Keep `build/TokenTracking.app` if it is your development app, and retain the DMGs and checksum files you still need. Usage history and browser logins live separately in `~/.tokentracking`.
+
 ## Signed releases later
 
 The publisher needs an Apple Developer Program membership and a **Developer ID Application** certificate. Local development certificates are not suitable for distribution. Configure signing and notarization yourself using Apple's tools; never commit credentials or private keys.

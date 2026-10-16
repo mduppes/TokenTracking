@@ -94,15 +94,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var fallbackWindow: NSWindow?
+    private var hasEverBeenVisible = false
+    private var hiddenCheckCount = 0
+
+    /// Returns true if an application is occupying the full screen on any connected display.
+    private func isFullScreenActive() -> Bool {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+        let screens = NSScreen.screens
+        for win in list {
+            let layer = win[kCGWindowLayer as String] as? Int ?? 0
+            if layer == 0 {
+                if let bounds = win[kCGWindowBounds as String] as? [String: Any],
+                   let w = bounds["Width"] as? CGFloat,
+                   let h = bounds["Height"] as? CGFloat {
+                    for s in screens {
+                        if w >= s.frame.width && h >= s.frame.height - 50 {
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
 
     @MainActor private func checkVisible() {
         let visible = statusItem.button?.window?.occlusionState.contains(.visible) ?? false
-        if visible, model.menuBarHidden {
-            // The icon is back (user allowed it or made room): return to menu-bar-only mode.
-            model.menuBarHidden = false
-            fallbackWindow?.close()
-            NSApp.setActivationPolicy(.accessory)
-        } else if !visible, !model.menuBarHidden {
+        if visible {
+            hasEverBeenVisible = true
+            hiddenCheckCount = 0
+            if model.menuBarHidden {
+                // The icon is back (user allowed it or made room): return to menu-bar-only mode.
+                model.menuBarHidden = false
+                fallbackWindow?.close()
+                NSApp.setActivationPolicy(.accessory)
+            }
+            return
+        }
+
+        // If the menu bar is intentionally hidden (user in a full-screen app, or menu bar auto-hidden),
+        // or if the icon has already been established in the menu bar, do not pop up a fallback window.
+        if !NSMenu.menuBarVisible() || isFullScreenActive() || hasEverBeenVisible {
+            return
+        }
+
+        // On initial launch, wait for multiple consecutive checks before assuming disallowed.
+        hiddenCheckCount += 1
+        guard hiddenCheckCount >= 2 else { return }
+
+        if !model.menuBarHidden {
             NSLog("TokenTracking: menu bar item hidden (not allowed in System Settings → Menu Bar, or no room); using Dock icon + window")
             model.menuBarHidden = true
             NSApp.setActivationPolicy(.regular)

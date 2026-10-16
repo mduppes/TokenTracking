@@ -3,6 +3,9 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Maintenance
+- Removed local release staging apps, cached Node runtimes/downloads and the generated screenshot preview to reclaim about 535 MB; kept the development app and both preview DMGs. Documented which generated folders can be cleared after release verification.
+
 ### Added
 - Landing page support links open the creator’s hosted Stripe checkout from the top navigation, hero downloads, footer and a prominent dedicated support section; creator profile links are configured separately, with GitHub/LinkedIn icons and a named mduppes.com link. No payment keys, widgets or backend are required.
 - Standalone React + TypeScript + Tailwind/Vite landing page (`website/`, ADR-013), with verified Apple Silicon/Intel download links, responsive product walkthrough, dashboard light/dark screenshots, current-source Settings screenshots, privacy details, installation guidance and preview-release caveats.
@@ -17,6 +20,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - **OpenAI (ChatGPT)** usage page support: the dedicated Chrome profile opens the usage overview and reads its rendered percentage meters with the shared DOM scraper. Added OpenAI to the dashboard, login flow and menu bar. Signed-in meter details still need end-to-end verification.
 - Menu bar shows OpenAI as `??` until its first reading is stored, so the new slot is visible before the first successful refresh.
 ### Fixed
+- Fixed menu bar fallback window popping up and stealing focus when entering full-screen mode in other apps. The visibility check now ignores intentional menu bar hiding during full-screen spaces (`CGWindowList`) and auto-hide states (`NSMenu.menuBarVisible()`), and never interrupts users once the menu bar icon has already been established.
 - Muse refresh recognizes “is warming up” as well as “Connecting…” and waits up to three minutes for the Settings usage meter, including when loading has no visible status label. A timeout keeps the last confirmed reading for the next refresh.
 - Muse no longer overwrites post-reset usage with old chat limit notices: fallback readings require a known reset within the next seven days. Missing Settings usage is reported separately from a connection timeout.
 - Settings drag reordering works again on macOS: an in-panel drag gesture moves the whole row under the pointer and shifts neighboring rows on hover, replacing native drag/drop callbacks that were not moving rows. Verified upward and downward drags in the running app.
@@ -24,6 +28,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - Refresh failures are surfaced in both UIs, and the service returns HTTP 500 for failed refreshes instead of reporting success.
 - OpenAI guest pages saying **Log in** now count as logged out, so they offer a login notice rather than a generic scraping error.
 - **Antigravity: a fully used pool wasn't shown.** The language server omits `remainingFraction` when it's 0, and the parser skipped those models, so the Claude + GPT-OSS pool just went stale instead of showing 100% / limit reached. A pool with a `resetTime` but no fraction now counts as 0% remaining.
+- **Antigravity went stale after a pool reset.** Meters were grouped by identical quota values, so once the Claude pool reset, every pool reported 100% with the same rolling reset time and they merged into a new meter, leaving the old ones stuck at their last reading. Antigravity now shows the same two groups as its own Settings, "Claude and GPT models" (`pool-claude-gpt`) and "Gemini models" (`pool-gemini`), assigned by model name so the ids never change. Schema migrations (v2, v3) fold the old meter ids into these. Re-select the Antigravity meter in Settings if you had chosen the old "Claude + GPT-OSS" one.
 ### Changed
 - Landing page colors now match the app: forest green and mint from its icon, warm neutral surfaces from the dashboard, and amber for the illustrative ahead-of-pace meter.
 - All landing-page external links, including Mac downloads and documentation, open in a new tab; section navigation stays on the page.

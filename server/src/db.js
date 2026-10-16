@@ -24,12 +24,39 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
 `;
 
+const SCHEMA_VERSION = 3;
+
+function migrate(db) {
+  const version = Number(db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get()?.value || 1);
+  if (version >= SCHEMA_VERSION) return;
+  db.exec('BEGIN');
+  try {
+    if (version < 2) {
+      // v2: Antigravity meters became one per model brand (lib/providers.js). The old grouped pool ids
+      // would otherwise linger as stale meters for a week; fold them into the stable Claude id so its
+      // history stays continuous ("pool-gemini" kept its id).
+      db.exec(`UPDATE snapshots SET meter_id = 'pool-claude', label = 'Claude models'
+        WHERE provider = 'antigravity' AND meter_id IN ('pool-claude-gpt-oss', 'pool-claude-gpt-oss-gemini')`);
+    }
+    if (version < 3) {
+      // v3: Antigravity now mirrors its own Settings: "Claude and GPT models" + "Gemini models". Claude's
+      // history carries over; the GPT-OSS rows only ever duplicated Claude's numbers, so they go.
+      db.exec(`UPDATE snapshots SET meter_id = 'pool-claude-gpt', label = 'Claude and GPT models'
+        WHERE provider = 'antigravity' AND meter_id = 'pool-claude'`);
+      db.exec(`DELETE FROM snapshots WHERE provider = 'antigravity' AND meter_id = 'pool-gpt-oss'`);
+    }
+    db.prepare(`UPDATE meta SET value = ? WHERE key = 'schema_version'`).run(String(SCHEMA_VERSION));
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
 export function openDb(path) {
   const fresh = path !== ':memory:' && !existsSync(path);
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec(SCHEMA);
   if (fresh) try { chmodSync(path, 0o600); } catch { /* best effort */ }
+  migrate(db);
 
   const insert = db.prepare(`INSERT INTO snapshots
     (provider, meter_id, label, window, used_percent, used, limit_value, unit, resets_at, reset_text, plan, source, captured_at, received_at)

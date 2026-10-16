@@ -103,7 +103,7 @@ test('makeMeter clamps and slugs', () => {
   assert.equal(m.window, 'weekly');
 });
 
-test('Antigravity GetUserStatus: models grouped into quota pools (redacted real shape)', () => {
+test('Antigravity GetUserStatus: the two groups from its Settings (redacted real shape)', () => {
   const now = new Date('2026-10-10T19:55:00Z');
   const cfg = (label, remainingFraction, resetTime) => ({ label, modelOrAlias: { model: 'MODEL_X' }, quotaInfo: { remainingFraction, resetTime } });
   const { meters, plan } = parseAntigravityStatus({ userStatus: {
@@ -119,7 +119,7 @@ test('Antigravity GetUserStatus: models grouped into quota pools (redacted real 
   } }, now);
   assert.equal(plan, 'Pro');
   assert.deepEqual(meters.map((m) => [m.id, m.label, m.window, m.usedPercent]), [
-    ['pool-claude-gpt-oss', 'Claude + GPT-OSS models', 'weekly', 51.04],
+    ['pool-claude-gpt', 'Claude and GPT models', 'weekly', 51.04],
     ['pool-gemini', 'Gemini models', 'session', 0],
   ]);
 });
@@ -160,7 +160,29 @@ test('Antigravity: an exhausted pool omits remainingFraction (real shape, 2026-1
     { label: 'No quota at all', quotaInfo: {} },
   ] } } }, now);
   assert.deepEqual(meters.map((m) => [m.id, m.usedPercent, m.resetsAt]), [
-    ['pool-claude-gpt-oss', 100, '2026-10-15T17:42:53.000Z'],
+    ['pool-claude-gpt', 100, '2026-10-15T17:42:53.000Z'],
     ['pool-gemini', 0, '2026-10-13T01:58:30.000Z'],
   ]);
+});
+
+test('Antigravity: meter ids stay stable when every pool reports the same values after a reset (2026-10-15)', () => {
+  // Real shape: once the Claude pool reset, all pools showed 100% remaining with one rolling resetTime.
+  // Grouping by value used to merge them into a new "pool-claude-gpt-oss-gemini" id and strand the old ones.
+  const now = new Date('2026-10-15T18:38:58Z');
+  const q = { remainingFraction: 1, resetTime: '2026-10-15T23:38:58Z' };
+  const { meters } = parseAntigravityStatus({ userStatus: { cascadeModelConfigData: { clientModelConfigs: [
+    { label: 'Gemini 3.8 Flash (Low)', quotaInfo: q },
+    { label: 'Claude Opus 5.5 (Low)', quotaInfo: q },
+    { label: 'Gemini 4 Argon', quotaInfo: {} },
+    { label: 'GPT-OSS 120B (Medium)', quotaInfo: q },
+  ] } } }, now);
+  assert.deepEqual(meters.map((m) => m.id), ['pool-claude-gpt', 'pool-gemini']);
+});
+
+test('Antigravity: a group whose models disagree reports its most-used model', () => {
+  const { meters } = parseAntigravityStatus({ userStatus: { cascadeModelConfigData: { clientModelConfigs: [
+    { label: 'Gemini 3.8 Flash (Low)', quotaInfo: { remainingFraction: 0.9, resetTime: '2026-10-15T23:00:00Z' } },
+    { label: 'Gemini 3.1 Pro (Low)', quotaInfo: { remainingFraction: 0.25, resetTime: '2026-10-15T22:00:00Z' } },
+  ] } } }, new Date('2026-10-15T18:00:00Z'));
+  assert.deepEqual(meters.map((m) => [m.id, m.usedPercent, m.resetsAt]), [['pool-gemini', 75, '2026-10-15T22:00:00.000Z']]);
 });
