@@ -4,7 +4,7 @@
 
 One place to see how close you are to the usage limits of your AI subscriptions, and how to pace yourself until they reset. It lives in your macOS menu bar.
 
-Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **OpenAI (ChatGPT)**, **Gemini (app)**, **Muse (Meta)**, and **Antigravity** (per quota pool, while the app is running). OpenAI signed-in reads have been verified; a possible duplicate usage row is still under review. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
+Supported: **Claude**, **Cursor** (including **Grok Bot**'s weekly limit), **OpenAI (ChatGPT)**, **Gemini (app)**, **Muse (Meta)**, and **Antigravity** (per quota pool, while the app is running). OpenAI signed-in reads and its session/weekly meter layout have been verified. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 It's **local-first**:
 - **Refresh:** every 15 minutes a headless Chrome (no window, no Dock icon) uses its own logged-in profile to read each service's usage, then quits. Chrome exits after each run.
@@ -24,7 +24,7 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
   <img src="docs/images/dashboard-light.png" width="520" alt="Dashboard: resets-next list and per-service cards with usage bars, even-pace markers, countdowns and sparklines">
 </p>
 
-<sub>Screenshots show the current source build and use demo data (`npm run screenshots`; native captures use the generated demo-only preview app). Published preview downloads may lag the source; Settings customization will ship in the next packaged preview.</sub>
+<sub>Screenshots use demo data and show the preview app, including menu bar customization.</sub>
 
 ## Features
 
@@ -40,14 +40,14 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
 - **Menu bar app:**
   - **Usage slots:** a brand icon and percentage per selected service; at the limit it shows a reset countdown (e.g. `↻2h`, `↻45m`) or `MAX`, and `??` means no reading or an unavailable selected meter.
   - **Native panel:** click for notices, upcoming resets and every meter, with Refresh now / Open dashboard / Quit.
-  - **Settings:** the top-right gear becomes an X to return. Show/hide services (including Gemini), drag whole rows with live reordering, use accessible arrow buttons, and choose a specific meter or **Highest usage**. Preferences save locally; Restore defaults resets them. Hiding all services leaves a clickable app icon.
+  - **Settings:** select and reorder your menu bar items, and choose which usage limit each item shows. Preferences are saved on your Mac.
   - **Lifecycle:** the app starts and stops the local service it owns.
 - **Also:** the full dashboard at http://127.0.0.1:7878 (card and table views, light and dark) and `npm run status` in the terminal.
 - **Stale, login and error notices with an Open browser button.** Services whose data is stale (missed about 2 refreshes) or whose login expired are listed at the top with the reason. **Open browser** opens the TokenTracking browser on that service; quit it (⌘Q) when you're done and that service refreshes automatically.
 
 ## Download for Mac
 
-[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.1/TokenTracking-0.6.0-preview.1-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.1/TokenTracking-0.6.0-preview.1-x64.dmg)
+[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.2/TokenTracking-0.6.0-preview.2-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.2/TokenTracking-0.6.0-preview.2-x64.dmg)
 
 Requires **macOS 13+** and **Google Chrome**. Node and the local service are included; no terminal, Git or Xcode tools needed.
 
@@ -59,7 +59,7 @@ Requires **macOS 13+** and **Google Chrome**. Node and the local service are inc
 
 To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
 
-The current GitHub download is **0.6.0-preview.1**. Menu bar Settings shown in these screenshots belong to the current source and will be included in the next packaged release.
+The current GitHub download is **0.6.0-preview.2**, with menu bar customization, updated provider readers, and fixes for OpenAI meters and Muse refreshes. See the [release notes](docs/releases/0.6.0-preview.2.md).
 
 ## Build from source
 
@@ -161,10 +161,11 @@ Environment variables:
 | Doc | Contents |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, data flow, data model, pacing math |
+| [docs/RELEASING.md](docs/RELEASING.md) | Build, verify and publish Mac downloads |
 | [docs/PROVIDERS.md](docs/PROVIDERS.md) | Per-service: where usage lives, how it's read, what's verified |
 | [docs/SECURITY.md](docs/SECURITY.md) | Threat model, what data is touched, privacy guarantees |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision records (why things are the way they are) |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next: cost-per-token, Antigravity, … |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What’s next and remaining verification |
 | [AGENTS.md](AGENTS.md) | Orientation for AI coding agents / new contributors |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 

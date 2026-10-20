@@ -1,8 +1,8 @@
 {
   "name": "tokentracking",
-  "version": "0.6.0-preview.1",
+  "version": "0.6.0-preview.2",
   "private": true,
-  "description": "Local-first tracker for AI subscription usage limits (Claude, Cursor + Grok Bot, Gemini, Muse) with pacing, in your macOS menu bar.",
+  "description": "Local-first macOS menu bar tracker for AI subscription limits and pacing: Claude, Cursor, ChatGPT, Gemini, Muse and Antigravity.",
   "type": "module",
   "engines": {
     "node": ">=22.13"

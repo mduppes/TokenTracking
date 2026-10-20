@@ -20,6 +20,7 @@ const meters = [
   { provider: 'cursor', id: 'total', label: 'Included total', window: 'monthly', resetIn: 9 * 24 * H, end: 72, plan: 'pro' },
   { provider: 'cursor', id: 'api', label: 'Other models', window: 'monthly', resetIn: 9 * 24 * H, end: 48 },
   { provider: 'cursor', id: 'auto', label: 'Cursor models', window: 'monthly', resetIn: 9 * 24 * H, end: 64 },
+  { provider: 'muse', id: 'weekly', label: 'Weekly limit', window: 'weekly', resetIn: 74 * H, end: 87, plan: 'Free plan' },
   { provider: 'gemini', id: 'current-usage', label: 'Current usage', window: 'session', resetIn: 2 * H, end: 1, staleBy: 3 * H }, // shows the stale notice
   { provider: 'cursor', id: 'grok-bot', label: 'Grok Bot', window: 'weekly', resetIn: 100 * H, end: 18 },
   { provider: 'antigravity', id: 'pool-claude-gpt', label: 'Claude and GPT models', window: 'weekly', resetIn: 118 * H, end: 51, plan: 'Pro' },

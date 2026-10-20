@@ -25,6 +25,32 @@ const MUSE = `<button data-testid="hatch-dock-more" aria-label="Settings" onclic
   <div id="dlg" hidden role="dialog"><h3>Usage</h3><div><div>Free plan</div><div>Weekly limit resets on Oct 14</div><div>95% used</div>
   <div role="progressbar" aria-label="Free plan" aria-valuenow="95" aria-valuemax="100" style="height:4px;width:200px"></div><a>Upgrade</a></div></div>`;
 
+// Structure seen on chatgpt.com/settings/usage?tab=overview (2026-10-17):
+// Plan limits with progress bars (aria-label="Usage remaining") and % left, followed by Recent plan usage
+// breakdown chart tab ("Weekly") and 100% total that must not be recognized as a quota meter.
+const OPENAI = `<main><h1>Usage</h1>
+  <section>
+    <h2>Plan limits</h2>
+    <div>
+      <div>5-hour limit</div>
+      <div>Resets in 5h 0m</div>
+      <span>100% left</span>
+      <progress max="100" value="100" aria-label="Usage remaining"></progress>
+    </div>
+    <div>
+      <div>Weekly limit</div>
+      <div>Resets in 4d 22h</div>
+      <span>17% left</span>
+      <progress max="100" value="17" aria-label="Usage remaining"></progress>
+    </div>
+  </section>
+  <section>
+    <h2>Recent plan usage</h2>
+    <div><button role="tab">5-hour</button><button role="tab">Weekly</button></div>
+    <span class="heading-lg">100%</span>
+    <div>Balance history isn’t available yet</div>
+  </section></main>`;
+
 let conn, profile;
 before(async () => {
   if (skip) return;
@@ -94,4 +120,19 @@ test('Muse reader waits for a visible warming-up state before opening Settings a
   } finally {
     await page.close();
   }
+});
+
+test('scraper reads OpenAI-style progress bars with generic aria-label, ignores activity breakdown chart', { skip }, async () => {
+  const page = await load(OPENAI);
+  const raw = await page.evaluate('TokenTrackingDom.scrape()');
+  await page.close();
+  assert.deepEqual(raw.map((m) => [m.label, m.percent, m.resetText]), [
+    ['5-hour limit', 0, 'Resets in 5h 0m'],
+    ['Weekly limit', 83, 'Resets in 4d 22h'],
+  ]);
+  const meters = normalizeDomMeters(raw);
+  assert.deepEqual(meters.map((m) => [m.id, m.window, m.usedPercent]), [
+    ['5-hour-limit', 'session', 0],
+    ['weekly-limit', 'weekly', 83],
+  ]);
 });

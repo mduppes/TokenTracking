@@ -3,6 +3,18 @@
 All notable changes to this project are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+No changes yet.
+
+## [0.6.0-preview.2] - 2026-10-20
+
+Packaged preview with menu bar customization, reset countdowns, provider fixes and refreshed documentation. The notes below consolidate work since 0.5.0, including the initial preview.1 packaging.
+
+### Release preparation
+- Published Apple Silicon and Intel preview DMGs with SHA-256 checksums; refreshed demo screenshots, README, provider status and release instructions together.
+- Simplified website and README feature copy around selecting menu items, usage pacing and reset times. Download links now point to preview.2, which includes Settings.
+- Fixed the screenshot menu bar renderer’s missing date helper and restored Muse usage to the demo dataset.
+
 ### Maintenance
 - Removed local release staging apps, cached Node runtimes/downloads and the generated screenshot preview to reclaim about 535 MB; kept the development app and both preview DMGs. Documented which generated folders can be cleared after release verification.
 
@@ -21,6 +33,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 - **OpenAI (ChatGPT)** usage page support: the dedicated Chrome profile opens the usage overview and reads its rendered percentage meters with the shared DOM scraper. Added OpenAI to the dashboard, login flow and menu bar. Signed-in meter details still need end-to-end verification.
 - Menu bar shows OpenAI as `??` until its first reading is stored, so the new slot is visible before the first successful refresh.
 ### Fixed
+- Fixed OpenAI phantom "Weekly" 100% (MAX) meter and duplicate "Usage remaining" meter on `chatgpt.com/settings/usage`. The DOM scraper (`lib/scrape-dom.js`) now skips generic progress bar accessibility labels (`aria-label="Usage remaining"`), reading visible card titles ("5-hour limit", "Weekly limit") directly, and ignores text percentages that lack both a reset indicator and "used/left/remaining" keywords (such as the 100% total in the "Recent plan usage" breakdown section). Database migration v5 removes legacy `weekly` and `usage-remaining` rows.
 - Fixed menu bar fallback window popping up and stealing focus when entering full-screen mode in other apps. The visibility check now ignores intentional menu bar hiding during full-screen spaces (`CGWindowList`) and auto-hide states (`NSMenu.menuBarVisible()`), and never interrupts users once the menu bar icon has already been established.
 - Muse refresh recognizes “is warming up” as well as “Connecting…” and waits up to three minutes for the Settings usage meter, including when loading has no visible status label. A timeout keeps the last confirmed reading for the next refresh.
 - Muse no longer overwrites post-reset usage with old chat limit notices: fallback readings require a known reset within the next seven days. Missing Settings usage is reported separately from a connection timeout.

@@ -19,7 +19,7 @@ Run the relocated-service smoke check on an Intel Mac with the x64 app as well. 
 
 Preview packages have ad-hoc signatures, **without Developer ID or Apple notarization**. Clearly label this in the README and release notes. Downloaders may need to attempt launch, then approve it using System Settings → Privacy & Security → Open Anyway. Do not suggest disabling Gatekeeper or removing quarantine. Installation requires dragging the app into Applications; it is not a silent one-click installer.
 
-Use a prerelease tag matching `package.json` (initially `v0.6.0-preview.1`). Upload both DMGs and checksum files to a GitHub prerelease, using `gh release create --prerelease --notes-file <file>`. Keep the README download links in sync with the tag and filenames. Quit the installed app before replacing it; the data directory persists.
+Use a prerelease tag matching `package.json` (currently `v0.6.0-preview.2`). Upload both DMGs and checksum files to a GitHub prerelease, using `gh release create --prerelease --notes-file <file>`. Keep the README download links in sync with the tag and filenames. Quit the installed app before replacing it; the data directory persists.
 
 ## Reclaim local build space
 
@@ -48,7 +48,7 @@ The static landing page is separate from the release allow-list (ADR-013). Befor
 1. Verify both uploaded DMGs and checksum assets exist.
 2. Update `website/src/release.ts` and README download URLs/version notes together.
 3. Regenerate demo web screenshots with `npm run screenshots`; capture the generated `TokenTrackingDemo.app` panel and Settings separately, never the production app. Copy approved assets with `npm run sync:assets --prefix website`.
-4. If the new release includes Settings customization, remove the website/README caveat that those controls are only in the current source build. Do not remove unsigned-preview installation guidance until Developer ID signing and notarization are verified.
+4. Keep user-facing feature descriptions focused on outcomes. Do not remove unsigned-preview installation guidance until Developer ID signing and notarization are verified.
 5. Run `npm run build --prefix website` and check desktop/mobile layouts before deploying `website/dist`.
 
-The currently linked `v0.6.0-preview.1` release predates menu bar customization. The website documents that difference explicitly. Website hosting/domain selection remains separate from Mac release publication.
+The linked `v0.6.0-preview.2` release includes menu bar customization and the current provider fixes. Release notes are checked in at `docs/releases/0.6.0-preview.2.md`; publish them with both DMGs and their checksum files. Website hosting/domain selection remains separate from Mac release publication.

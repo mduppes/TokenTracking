@@ -25,9 +25,9 @@ npm run sync:assets --prefix website
 npm run build --prefix website
 ```
 
-Screenshots come exclusively from demo data. `npm run screenshots` refreshes web PNGs and builds `build/screenshot-preview/TokenTrackingDemo.app`. Capture that demo app’s panel and Settings with computer-use tools or manually into `docs/images/panel-dark.png` and `docs/images/settings-dark.png`, then sync the assets. Never capture the production app. The native panel and Settings are rendered from the current Swift source, so the site explicitly distinguishes them from the older packaged preview. Do not upload real captures.
+Screenshots come exclusively from demo data. `npm run screenshots` refreshes web PNGs and builds `build/screenshot-preview/TokenTrackingDemo.app`. Capture that demo app’s panel and Settings with computer-use tools or manually into `docs/images/panel-dark.png` and `docs/images/settings-dark.png`, then sync the assets. Never capture the production app. The native panel and Settings are rendered from the same Swift source as the preview release. Do not upload real captures.
 
-Update `src/release.ts` when a new GitHub release is published. Verify both DMG URLs and checksum assets; update README download links at the same time. Remove the “Settings will ship in the next preview” copy in `src/App.tsx` only once those features are packaged in the linked release.
+Update `src/release.ts` when a new GitHub release is published. Verify both DMG URLs and checksum assets; update README download links at the same time. Keep feature copy focused on user benefits: selecting and reordering menu items, choosing the limits to see, and knowing when usage resets. Avoid describing individual gestures or implementation mechanics.
 
 ## Support and creator links
 

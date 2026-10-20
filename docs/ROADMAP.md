@@ -4,9 +4,9 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
 - [ ] **Muse live warmup verification:** the user’s 2026-10-14 screenshot confirms “is warming up”, which the old connection check missed. The reader now waits up to three minutes for warmup and Settings usage, with simulated-time and real-Chrome fixture coverage. Monitor whether live warmups need a longer allowance; expired notices remain rejected.
-- [ ] **Website rollout:** choose hosting/domain and deploy `website/dist`. Publish the next Mac preview with Settings customization before removing the site’s source-build caveat; update `website/src/release.ts`, README links and screenshots together.
+- [ ] **Website rollout:** choose hosting/domain and deploy the refreshed `website/dist`. Preview.2 includes Settings customization; site download links, README and demo screenshots are synchronized.
 - [ ] **Mac distribution:** sign and notarize downloads with Developer ID before promoting the unsigned preview to a stable release. Verify first-launch Gatekeeper and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
-- [ ] **OpenAI:** finish meter-layout verification and add a redacted DOM fixture. A signed-in capture on 2026-10-13 stored 5-hour and weekly limits plus a generic "Usage remaining" meter; check whether the generic row duplicates the 5-hour pool and normalize it if so. Browser errors offer Open browser to inspect the session.
+- [x] **OpenAI:** verified meter layout against live signed-in session (2026-10-17). `scrape-dom.js` now reads visible headings when progress bar accessibility labels are generic ("Usage remaining") and ignores non-quota percentage headings in activity breakdown charts ("Weekly" 100%), with v5 schema migration and redacted fixture test.
 - [x] **Icons:** authentic brand vector icons for all providers across the macOS menu bar and dashboard (Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse, Gemini).
 - [ ] **Watch headless for a few days** for bot blocks or session expiry; tune the interval if needed.
 - [ ] **Claude multi-org picker** (config or dashboard setting).
@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Build and publish 0.6.0-preview.2 for Apple Silicon and Intel; refresh demo screenshots, website copy and GitHub documentation together (2026-10-20). Relocated-service checks cover arm64 and x64 under Rosetta; physical Intel/fresh-Mac verification remains pending.
 - [x] Clear local release staging apps, Node build caches and the screenshot preview; retain the development app and preview DMGs, and document safe build cleanup (2026-10-15; about 535 MB reclaimed).
 - [x] Muse warming-up detection and three-minute meter loading allowance, including missing usage with no visible loading label (2026-10-14; fixture verified).
 - [x] Reject expired Muse limit notices after weekly reset; regression tests cover next-year rollover, unknown dates, seven-day bounds and New Year (2026-10-14).

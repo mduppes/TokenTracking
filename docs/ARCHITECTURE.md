@@ -94,7 +94,7 @@ The web dashboard (`server/public/app.js`) and the menu bar panel (Swift `PanelV
 }
 ```
 
-**SQLite** (`~/.tokentracking/tokentracking.db`): a single append-only `snapshots` table, one row per meter reading, indexed on `(provider, meter_id, captured_at)`. Schema version is in `meta.schema_version`. Migrations: bump the version, then add `ALTER`s in `openDb`.
+**SQLite** (`~/.tokentracking/tokentracking.db`): a single `snapshots` history table, one row per meter reading, indexed on `(provider, meter_id, captured_at)`. Schema version is in `meta.schema_version`. Migrations run transactionally in `openDb`. Schema v5 removes invalid OpenAI `weekly` and `usage-remaining` readings from older scrapers; valid `weekly-limit` and `5-hour-limit` history remains. Bump the version when adding a migration.
 
 ## Pacing math (`server/src/pacing.js`)
 

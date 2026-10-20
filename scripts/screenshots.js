@@ -58,10 +58,12 @@ db.close();
 try {
   const src = readFileSync('menubar/TokenTrackingMenu.swift', 'utf8');
   const glyphs = src.slice(src.indexOf('/// One service in the menu bar'), src.indexOf('// MARK: - Status polling'));
+  const dateParser = src.slice(src.indexOf('func parseDate('), src.indexOf('/// "2d 4h"'));
   const swiftFile = join(home, 'glyphs.swift');
   writeFileSync(swiftFile, `import AppKit
 ${glyphs}
-let slots = [("claude", 92.0), ("cursor", 72), ("antigravity", 51), ("grok-bot", 18), ("openai", 42), ("muse", 100)]
+${dateParser}
+let slots = [("claude", 92.0), ("cursor", 72), ("antigravity", 51), ("grok-bot", 18), ("openai", 42), ("muse", 87)]
   .map { MenuSlot(symbol: $0.0, text: MenuBarGlyphs.digits($0.1)) }
 let glyph = MenuBarGlyphs.image(for: slots)
 let s: CGFloat = 2, pad: CGFloat = 14, band: CGFloat = 26

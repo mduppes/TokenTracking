@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
 `;
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function migrate(db) {
   const version = Number(db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get()?.value || 1);
@@ -51,6 +51,11 @@ function migrate(db) {
       // Argon snapshots to pool-gemini-argon.
       db.exec(`UPDATE snapshots SET meter_id = 'pool-gemini-argon', label = 'Gemini 4 Argon', window = 'weekly'
         WHERE provider = 'antigravity' AND meter_id = 'pool-gemini' AND resets_at LIKE '2026-10-23T12:%'`);
+    }
+    if (version < 5) {
+      // v5: Delete spurious OpenAI meters ("weekly" scraped from Recent plan usage breakdown tab,
+      // and "usage-remaining" from progress bar aria-label).
+      db.exec(`DELETE FROM snapshots WHERE provider = 'openai' AND meter_id IN ('weekly', 'usage-remaining')`);
     }
     db.prepare(`UPDATE meta SET value = ? WHERE key = 'schema_version'`).run(String(SCHEMA_VERSION));
     db.exec('COMMIT');

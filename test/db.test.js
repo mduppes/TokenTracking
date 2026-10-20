@@ -20,17 +20,25 @@ test('schema migrations fold old Antigravity meter ids into the fixed groups', (
     add.run('pool-gemini', 'Gemini models', 0, '2026-10-16T17:33:02Z', '2026-10-15T17:33:02Z', '2026-10-15T17:33:02Z');
     add.run('pool-gemini', 'Gemini models', 80, '2026-10-23T12:35:35Z', '2026-10-16T14:00:00Z', '2026-10-16T14:00:00Z'); // v3-era misattributed Argon row
     add.run('pool-gpt-oss', 'GPT-OSS models', 0, null, '2026-10-15T17:48:27Z', '2026-10-15T17:48:27Z'); // a v2-era row
+    const addOpenAI = raw.prepare(`INSERT INTO snapshots (provider, meter_id, label, window, used_percent, resets_at, captured_at, received_at)
+      VALUES ('openai', ?, ?, ?, ?, ?, ?, ?)`);
+    addOpenAI.run('weekly', 'Weekly', 'weekly', 100, null, '2026-10-17T10:00:00Z', '2026-10-17T10:00:00Z');
+    addOpenAI.run('usage-remaining', 'Usage remaining', 'session', 0, '2026-10-17T15:00:00Z', '2026-10-17T10:00:00Z', '2026-10-17T10:00:00Z');
+    addOpenAI.run('weekly-limit', 'Weekly limit', 'weekly', 83, '2026-10-22T08:00:00Z', '2026-10-17T10:00:00Z', '2026-10-17T10:00:00Z');
+    addOpenAI.run('5-hour-limit', '5-hour limit', 'session', 0, '2026-10-17T15:00:00Z', '2026-10-17T10:00:00Z', '2026-10-17T10:00:00Z');
     raw.close();
 
     const db = openDb(path);
-    assert.deepEqual(db.latest('2026-01-01').map((r) => [r.meter_id, r.label, r.used_percent]), [
-      ['pool-claude-gpt', 'Claude and GPT models', 0],
-      ['pool-gemini', 'Gemini models', 0],
-      ['pool-gemini-argon', 'Gemini 4 Argon', 80],
+    assert.deepEqual(db.latest('2026-01-01').map((r) => [r.provider, r.meter_id, r.label, r.used_percent]), [
+      ['antigravity', 'pool-claude-gpt', 'Claude and GPT models', 0],
+      ['antigravity', 'pool-gemini', 'Gemini models', 0],
+      ['antigravity', 'pool-gemini-argon', 'Gemini 4 Argon', 80],
+      ['openai', '5-hour-limit', '5-hour limit', 0],
+      ['openai', 'weekly-limit', 'Weekly limit', 83],
     ]);
     assert.equal(db.history('antigravity', 'pool-claude-gpt', '2026-01-01').length, 2);
     assert.equal(db.history('antigravity', 'pool-gemini-argon', '2026-01-01').length, 1);
-    assert.equal(db.raw.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get().value, '4');
+    assert.equal(db.raw.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get().value, '5');
     db.close();
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
