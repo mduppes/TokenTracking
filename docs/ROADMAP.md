@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Add Open Graph and Twitter summary card image tags with the 512×512 app icon for link share previews (2026-10-20).
 - [x] Add a short personal note to the website support section explaining how donations help maintain the app (2026-10-20).
 - [x] Refine website visuals with icon rows, stronger contrast, screenshot framing and compact cards instead of literal bullets (2026-10-20).
 - [x] Simplify website copy and layout: direct headings, bullet lists and fewer repeated sections (2026-10-20).

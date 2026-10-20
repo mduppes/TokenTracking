@@ -5,6 +5,7 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 ## [Unreleased]
 
 ### Changed
+- Added Open Graph and Twitter summary card image tags pointing to the 512×512 app icon, enabling rich link share previews across messaging and social platforms.
 - Humanized the website’s support section with a personal note from the developer and clearer context on how donations support ongoing maintenance.
 - Replaced website bullet markers with local SVG icon rows, stronger type hierarchy, contrasting screenshot frames, privacy cards and numbered setup cards; kept the copy concise.
 - Simplified the website around concise headings and bullet points; removed promotional slogans, repeated feature explanations and illustrative feature cards. Downloads, real screenshots, setup and privacy information remain.
