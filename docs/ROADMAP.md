@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Simplify website copy and layout: direct headings, bullet lists and fewer repeated sections (2026-10-20).
 - [x] Stop Chrome’s startup app clone from triggering macOS App Management under TokenTracking’s identity, for refresh and login; local-only A/B launch diagnostics confirmed the request disappears (2026-10-20).
 - [x] Developer ID signed and Apple-notarized preview.3 for arm64 and x64, with attached DMG tickets, Gatekeeper checks and relocated signed-runtime smoke tests (2026-10-20).
 - [x] Build and publish 0.6.0-preview.2 for Apple Silicon and Intel; refresh demo screenshots, website copy and GitHub documentation together (2026-10-20). Relocated-service checks cover arm64 and x64 under Rosetta; physical Intel/fresh-Mac verification remains pending.

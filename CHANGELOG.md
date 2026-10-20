@@ -4,7 +4,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+- Simplified the website around concise headings and bullet points; removed promotional slogans, repeated feature explanations and illustrative feature cards. Downloads, real screenshots, setup and privacy information remain.
 
 ## [0.6.0-preview.4] - 2026-10-20
 ### Fixed
