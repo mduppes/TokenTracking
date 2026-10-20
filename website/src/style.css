@@ -95,6 +95,8 @@ kbd { font: inherit; font-size: 11px; background: #f2f5ef; border: 1px solid var
 .release-notes dd { color: var(--muted); font-size: 11px; line-height: 1.7; margin: 0; }
 .support-section { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 32px; margin-block: 42px 55px; background: #e6eee1; border: 1px solid #d3e0cb; border-radius: 19px; }
 .support-section h2 { font-size: 27px; }
+.support-copy { max-width: 620px; }
+.support-copy p { color: var(--muted); font-size: 14px; line-height: 1.8; margin: 14px 0 0; }
 .support-section-action { display: flex; flex-direction: column; align-items: center; gap: 11px; flex-shrink: 0; }
 .support-section-action .support-link { color: white; padding: 14px 26px; font-size: 13px; }
 .support-section-action > span { font-size: 10px; color: var(--muted); }

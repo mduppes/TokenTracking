@@ -140,7 +140,7 @@ export default function App() {
       </section>
 
       <section id="support" className="support-section page-width" aria-labelledby="support-title">
-        <h2 id="support-title">Support development</h2>
+        <div className="support-copy"><h2 id="support-title">Support development</h2><p>I’m Mark, the developer behind TokenTracking. If the app helps you, a donation supports the time I spend fixing bugs and keeping it working as providers change.</p></div>
         <div className="support-section-action"><SupportLink className="button button-primary" label="Donate" /><span>Optional · Stripe checkout</span></div>
       </section>
     </main>
