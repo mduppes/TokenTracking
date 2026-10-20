@@ -4,8 +4,8 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
 - [ ] **Muse live warmup verification:** the user’s 2026-10-14 screenshot confirms “is warming up”, which the old connection check missed. The reader now waits up to three minutes for warmup and Settings usage, with simulated-time and real-Chrome fixture coverage. Monitor whether live warmups need a longer allowance; expired notices remain rejected.
-- [x] **Website rollout:** public Sites deployment at https://tokentracking.truedog2.chatgpt.site (2026-10-20). Preview.2 download links, README and demo screenshots are synchronized.
-- [ ] **Mac distribution:** sign and notarize downloads with Developer ID before promoting the unsigned preview to a stable release. Verify first-launch Gatekeeper and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
+- [x] **Website rollout:** public Sites deployment at https://tokentracking.truedog2.chatgpt.site (2026-10-20). Preview.3 signed download links and README are synchronized; demo screenshots remain current.
+- [ ] **Mac distribution:** preview.3 is Developer ID signed and Apple-notarized. Before promoting to stable, verify first-launch Gatekeeper, browser login and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
 - [x] **OpenAI:** verified meter layout against live signed-in session (2026-10-17). `scrape-dom.js` now reads visible headings when progress bar accessibility labels are generic ("Usage remaining") and ignores non-quota percentage headings in activity breakdown charts ("Weekly" 100%), with v5 schema migration and redacted fixture test.
 - [x] **Icons:** authentic brand vector icons for all providers across the macOS menu bar and dashboard (Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse, Gemini).
 - [ ] **Watch headless for a few days** for bot blocks or session expiry; tune the interval if needed.
@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Developer ID signed and Apple-notarized preview.3 for arm64 and x64, with attached DMG tickets, Gatekeeper checks and relocated signed-runtime smoke tests (2026-10-20).
 - [x] Build and publish 0.6.0-preview.2 for Apple Silicon and Intel; refresh demo screenshots, website copy and GitHub documentation together (2026-10-20). Relocated-service checks cover arm64 and x64 under Rosetta; physical Intel/fresh-Mac verification remains pending.
 - [x] Clear local release staging apps, Node build caches and the screenshot preview; retain the development app and preview DMGs, and document safe build cleanup (2026-10-15; about 535 MB reclaimed).
 - [x] Muse warming-up detection and three-minute meter loading allowance, including missing usage with no visible loading label (2026-10-14; fixture verified).

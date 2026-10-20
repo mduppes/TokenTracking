@@ -4,7 +4,12 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 
-### Documentation
+No changes yet.
+
+## [0.6.0-preview.3] - 2026-10-20
+### Changed
+- Mac downloads now use Developer ID signatures and Apple notarization, with tickets attached to both Apple Silicon and Intel DMGs. Gatekeeper accepts both apps as Notarized Developer ID.
+- README, website downloads, installation guidance and security/release documentation reflect the signed packages. Existing provider behavior and demo screenshots are unchanged.
 - Published the public landing page at https://tokentracking.truedog2.chatgpt.site and recorded its hosting identity for future deployments.
 
 ## [0.6.0-preview.2] - 2026-10-20

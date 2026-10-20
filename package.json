@@ -1,6 +1,6 @@
 {
   "name": "tokentracking",
-  "version": "0.6.0-preview.2",
+  "version": "0.6.0-preview.3",
   "private": true,
   "description": "Local-first macOS menu bar tracker for AI subscription limits and pacing: Claude, Cursor, ChatGPT, Gemini, Muse and Antigravity.",
   "type": "module",

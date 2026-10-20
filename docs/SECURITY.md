@@ -46,7 +46,8 @@ File permissions: the data dir and profile are created `0700`; the DB and status
 
 ## Menu bar app
 
-- Built locally and signed with a **self-signed local certificate** ("TokenTracking Local Signing", created by `scripts/create-signing-cert.sh` in your login keychain and trusted for code signing on this Mac only). Without it, builds are ad-hoc signed. It isn't notarized. Remove the certificate in Keychain Access any time.
+- Source builds are signed with a **self-signed local certificate** ("TokenTracking Local Signing", created by `scripts/create-signing-cert.sh` in your login keychain and trusted for code signing on this Mac only). Without it, builds are ad-hoc signed. It isn't notarized. Remove the certificate in Keychain Access any time.
+- Public downloads from preview.3 are signed with Developer ID and notarized by Apple. Signing and notarization use publisher tooling; the app never reads signing keys or notarization credentials.
 - Talks only to the local service.
 - Starts the service as a child process. The service exits when the app does, including on force quit (`TOKENTRACKING_PARENT_PID`).
 - `NSAllowsLocalNetworking` permits plain HTTP to 127.0.0.1 only.

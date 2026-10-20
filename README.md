@@ -47,7 +47,7 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
 
 ## Download for Mac
 
-[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.2/TokenTracking-0.6.0-preview.2-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.2/TokenTracking-0.6.0-preview.2-x64.dmg)
+[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.3/TokenTracking-0.6.0-preview.3-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.3/TokenTracking-0.6.0-preview.3-x64.dmg)
 
 Requires **macOS 13+** and **Google Chrome**. Node and the local service are included; no terminal, Git or Xcode tools needed.
 
@@ -55,11 +55,11 @@ Requires **macOS 13+** and **Google Chrome**. Node and the local service are inc
 2. Open the DMG and drag **TokenTracking** to **Applications**. Launch it from Applications.
 3. Click **Open browser** on each provider you use, log in, then quit the dedicated Chrome window with **Cmd+Q**. That provider refreshes automatically. If needed, enable TokenTracking in **System Settings → Menu Bar**.
 
-**Preview release:** these downloads are ad-hoc signed, without Apple Developer ID signing or notarization. macOS may block the first launch. After attempting to open the app, use **System Settings → Privacy & Security → Open Anyway** if you choose to trust this build. Do not disable Gatekeeper. Fully signed downloads are planned; see [release packaging](docs/RELEASING.md).
+**Signed preview:** downloads are signed with Developer ID and notarized by Apple. macOS may ask you to confirm opening an app downloaded from the internet. See [release packaging](docs/RELEASING.md).
 
 To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
 
-The current GitHub download is **0.6.0-preview.2**, with menu bar customization, updated provider readers, and fixes for OpenAI meters and Muse refreshes. See the [release notes](docs/releases/0.6.0-preview.2.md).
+The current GitHub download is **0.6.0-preview.3**, with Developer ID signing and Apple notarization, plus the menu bar customization and provider fixes from preview.2. See the [release notes](docs/releases/0.6.0-preview.3.md).
 
 ## Build from source
 
