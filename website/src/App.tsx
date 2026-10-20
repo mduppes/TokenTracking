@@ -140,8 +140,8 @@ export default function App() {
       </section>
 
       <section id="support" className="support-section page-width" aria-labelledby="support-title">
-        <div className="support-copy"><h2 id="support-title">Support development</h2><p>I’m Mark, the developer behind TokenTracking. If the app helps you, a donation supports the time I spend fixing bugs and keeping it working as providers change.</p></div>
-        <div className="support-section-action"><SupportLink className="button button-primary" label="Donate" /><span>Optional · Stripe checkout</span></div>
+        <div className="support-copy"><h2 id="support-title">A note from the developer</h2><p>Hey, I’m Mark. I built TokenTracking because I wanted a quiet, private way to track my AI limits without another subscription. The app is completely free and open source. If it saves you time in your daily workflow, a tip helps support the hours spent keeping it working as providers change.</p></div>
+        <div className="support-section-action"><SupportLink className="button button-primary" label="Support on Stripe" /><span>One-time tip · Stripe checkout</span></div>
       </section>
     </main>
     <footer className="site-footer page-width"><div className="footer-main"><a className="brand" href="#"><img src="/images/icon.png" width="28" height="28" alt="" />TokenTracking</a><div><SupportLink /><a className="social-link" href={release.repository} target="_blank" rel="noopener noreferrer"><SocialIcon kind="github" />Source code</a><a href={`${release.repository}/blob/main/README.md`} target="_blank" rel="noopener noreferrer">Documentation</a><a href={`${release.repository}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">MIT license</a></div></div><div className="creator-links"><span>Creator</span>{creatorLinks.map(({ label, href, icon }) => <a key={label} href={href} target="_blank" rel="noopener noreferrer">{icon && <SocialIcon kind={icon} />}{label} <span aria-hidden="true">↗</span></a>)}</div><p>Independent project. Not affiliated with the providers shown. Trademarks belong to their owners.</p></footer>
