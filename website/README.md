@@ -42,6 +42,6 @@ For a static host, set:
 - Build command: `npm run build`
 - Publish/output directory: `dist`
 
-The site uses root-relative assets and is intended for a domain root. For GitHub Pages under a repository subpath, configure Vite’s `base` and adjust asset URLs first. No SPA rewrite is required: the page uses anchor links, not client-side routes. Hosting/domain selection is pending; no deployment has been created.
+The site uses root-relative assets and is intended for a domain root. For GitHub Pages under a repository subpath, configure Vite’s `base` and adjust asset URLs first. No SPA rewrite is required: the page uses anchor links, not client-side routes. The public site is hosted with Sites at https://tokentracking.truedog2.chatgpt.site. Its project identity is tracked in `.openai/hosting.json`; preserve that identity for future deployments. Custom-domain setup remains optional.
 
 All images, SVGs, CSS and JavaScript are served locally by the site. External links open in a new tab with `noopener noreferrer`, including downloads, documentation, Stripe checkout and creator profiles. Section anchors keep visitors on the page. There are no runtime analytics, remote fonts or calls to the local usage service.

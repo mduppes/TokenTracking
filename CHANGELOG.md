@@ -4,7 +4,8 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 
-No changes yet.
+### Documentation
+- Published the public landing page at https://tokentracking.truedog2.chatgpt.site and recorded its hosting identity for future deployments.
 
 ## [0.6.0-preview.2] - 2026-10-20
 

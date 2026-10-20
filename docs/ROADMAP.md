@@ -4,7 +4,7 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
 - [ ] **Muse live warmup verification:** the user’s 2026-10-14 screenshot confirms “is warming up”, which the old connection check missed. The reader now waits up to three minutes for warmup and Settings usage, with simulated-time and real-Chrome fixture coverage. Monitor whether live warmups need a longer allowance; expired notices remain rejected.
-- [ ] **Website rollout:** choose hosting/domain and deploy the refreshed `website/dist`. Preview.2 includes Settings customization; site download links, README and demo screenshots are synchronized.
+- [x] **Website rollout:** public Sites deployment at https://tokentracking.truedog2.chatgpt.site (2026-10-20). Preview.2 download links, README and demo screenshots are synchronized.
 - [ ] **Mac distribution:** sign and notarize downloads with Developer ID before promoting the unsigned preview to a stable release. Verify first-launch Gatekeeper and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
 - [x] **OpenAI:** verified meter layout against live signed-in session (2026-10-17). `scrape-dom.js` now reads visible headings when progress bar accessibility labels are generic ("Usage remaining") and ignores non-quota percentage headings in activity breakdown charts ("Weekly" 100%), with v5 schema migration and redacted fixture test.
 - [x] **Icons:** authentic brand vector icons for all providers across the macOS menu bar and dashboard (Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse, Gemini).
