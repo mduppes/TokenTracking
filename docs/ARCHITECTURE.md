@@ -42,6 +42,8 @@
 | `chrome.js` | Launches Google Chrome (`--headless=new`, dedicated `--user-data-dir`) and speaks CDP over `--remote-debugging-pipe` (fd 3/4, NUL-delimited JSON). `browserIdentity()` builds the User-Agent/Client-Hints override, and `openPage()` applies it plus a small pre-page script (webdriver, screen). `profileInUse()` reads Chrome's `SingletonLock`. |
 | `refresh.js` | `TASKS` (one per provider: URL, `loggedOut(href, text)`, `read(page)`), `runHeadlessRefresh()` (single-flight), and the last-run status in `~/.tokentracking/headless-status.json` |
 
+`chromeProfileArgs()` supplies shared launch settings for refresh and login. On macOS it disables Chrome’s update-time app clone (`MacAppCodeSignClone`) to avoid App Management requests; Chrome’s sandbox and code-signature checks remain enabled. See SECURITY.md.
+
 Flow per run:
 0. Local sources first, no Chrome needed: Antigravity's language server (`server/src/local/antigravity.js`, ADR-011).
 1. Skip if there's no profile yet, or if the `browser-login` window is open (the profile is locked).

@@ -2,7 +2,7 @@
 
 All providers are read by the headless refresher (`server/src/headless/refresh.js`, `TASKS`), from inside each provider's own site, using the dedicated logged-in Chrome profile.
 
-Release and screenshot check (2026-10-20): preview.3 signs and notarizes the same readers and schema v5 shipped in preview.2. Refreshed assets use throwaway demo data only; no live provider reads were rerun for release preparation. Verification dates below remain the dates of actual provider checks.
+Release and screenshot check (2026-10-20): preview.4 keeps the provider readers and schema v5 from preview.2 and disables Chrome’s app-clone maintenance during refresh and login. A local-only Chrome comparison verified the permission fix; no live provider sessions were used. Refreshed assets use throwaway demo data only; no live provider reads were rerun for release preparation. Verification dates below remain the dates of actual provider checks.
 
 Menu bar customization (2026-10-13): all seven service slots, including Gemini and Cursor’s separate Grok Bot limit, are selectable. Visibility affects only the menu bar; provider collection and verification dates below are unchanged.
 

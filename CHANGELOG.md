@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 No changes yet.
 
+## [0.6.0-preview.4] - 2026-10-20
+### Fixed
+- Background refreshes and login windows no longer invoke Chrome’s macOS app-cloning maintenance, which triggered an unnecessary App Management request attributed to TokenTracking. Chrome’s sandbox and signature checks remain enabled. Local-only A/B diagnostics confirmed the request disappears.
+
 ## [0.6.0-preview.3] - 2026-10-20
 ### Changed
 - Mac downloads now use Developer ID signatures and Apple notarization, with tickets attached to both Apple Silicon and Intel DMGs. Gatekeeper accepts both apps as Notarized Developer ID.

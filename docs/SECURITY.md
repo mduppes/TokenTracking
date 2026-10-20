@@ -52,6 +52,12 @@ File permissions: the data dir and profile are created `0700`; the DB and status
 - Starts the service as a child process. The service exits when the app does, including on force quit (`TOKENTRACKING_PARENT_PID`).
 - `NSAllowsLocalNetworking` permits plain HTTP to 127.0.0.1 only.
 
+## Chrome and macOS App Management
+
+TokenTracking does not need **App Management** (permission to update or delete other apps). Leave it off. Both the background refresher and login window disable Chrome’s `MacAppCodeSignClone` feature for their own Chrome process. This does not change the normal browser’s settings, grant permissions, or disable Chrome’s sandbox or signature verification.
+
+Chrome 155’s [clone manager](https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8059.85/chrome/browser/mac/code_sign_clone_manager.mm) creates a temporary copy of its bundle and hard-links its installed executable to keep its running code available across Chrome updates. macOS attributes that bundle operation to the parent app, TokenTracking. A controlled headless comparison on 2026-10-20, using disposable profiles and a local-only page, recorded an App Management request with the default launch and none with cloning disabled; both could read the page. Since these browser instances are short-lived, skipping this update-maintenance copy is appropriate. If Chrome is updated during a run and exits, retry the refresh.
+
 ## History
 
 - **v0.1–0.4** used a Chrome extension. Its hidden-refresh mode removed `X-Frame-Options`/CSP headers in an invisible frame (ADR-008), and it set a first-party `Origin` on one Cursor request.

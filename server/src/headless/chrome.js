@@ -6,6 +6,20 @@ import { join } from 'node:path';
 
 export const DEFAULT_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
+/** Shared by background refresh and the visible login browser. */
+export function chromeProfileArgs(profileDir, platform = process.platform) {
+  return [
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-sync',
+    // Chrome's update-time app clone hard-links its installed executable, triggering
+    // macOS App Management under our identity. We don't need this maintenance copy.
+    // This leaves Chrome's sandbox and signature checks intact; see SECURITY.md.
+    ...(platform === 'darwin' ? ['--disable-features=MacAppCodeSignClone'] : []),
+  ];
+}
+
 /** Chrome leaves a SingletonLock symlink ("host-pid") while a profile is open. */
 export function profileInUse(profileDir) {
   const lock = join(profileDir, 'SingletonLock');
@@ -25,11 +39,8 @@ export function profileInUse(profileDir) {
 export async function launchChrome({ chromePath, profileDir, headless = true, extraArgs = [] }) {
   if (!existsSync(chromePath)) throw new Error(`Chrome not found at ${chromePath} (set TOKENTRACKING_CHROME)`);
   const args = [
-    `--user-data-dir=${profileDir}`,
+    ...chromeProfileArgs(profileDir),
     '--remote-debugging-pipe',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-sync',
     '--disable-background-networking',
     '--disable-blink-features=AutomationControlled',
     '--mute-audio',

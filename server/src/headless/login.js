@@ -2,7 +2,7 @@
 // Used by `npm run browser-login` and the dashboard's "Log in" buttons (POST /api/login).
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
-import { profileInUse } from './chrome.js';
+import { chromeProfileArgs, profileInUse } from './chrome.js';
 
 /** Where to log in for each provider that uses the browser profile (Antigravity doesn't). */
 export const LOGIN_URLS = {
@@ -25,7 +25,7 @@ export function openLoginWindow(config, providers = [], onClose = null) {
   const urls = (providers.length ? providers : Object.keys(LOGIN_URLS)).map((p) => LOGIN_URLS[p]).filter(Boolean);
   if (!urls.length) return { ok: false, reason: 'unknown provider' };
   mkdirSync(profileDir, { recursive: true, mode: 0o700 });
-  const child = spawn(chromePath, [`--user-data-dir=${profileDir}`, '--no-first-run', '--no-default-browser-check', '--disable-sync', ...urls],
+  const child = spawn(chromePath, [...chromeProfileArgs(profileDir), ...urls],
     { detached: true, stdio: 'ignore' });
   child.on('exit', () => onClose?.());
   child.unref();

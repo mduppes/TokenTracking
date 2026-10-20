@@ -47,7 +47,7 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
 
 ## Download for Mac
 
-[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.3/TokenTracking-0.6.0-preview.3-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.3/TokenTracking-0.6.0-preview.3-x64.dmg)
+[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.4/TokenTracking-0.6.0-preview.4-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.4/TokenTracking-0.6.0-preview.4-x64.dmg)
 
 Requires **macOS 13+** and **Google Chrome**. Node and the local service are included; no terminal, Git or Xcode tools needed.
 
@@ -59,7 +59,7 @@ Requires **macOS 13+** and **Google Chrome**. Node and the local service are inc
 
 To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
 
-The current GitHub download is **0.6.0-preview.3**, with Developer ID signing and Apple notarization, plus the menu bar customization and provider fixes from preview.2. See the [release notes](docs/releases/0.6.0-preview.3.md).
+The current GitHub download is **0.6.0-preview.4**, with the fix for Chrome’s unnecessary App Management request, Developer ID signing and Apple notarization. See the [release notes](docs/releases/0.6.0-preview.4.md).
 
 ## Build from source
 
