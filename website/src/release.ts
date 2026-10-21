@@ -1,7 +1,7 @@
 // Keep preview signing status and URLs in sync with GitHub Releases and docs/RELEASING.md.
 export const release = {
-  version: '0.6.0-preview.4',
-  tag: 'v0.6.0-preview.4',
+  version: '0.6.0-preview.5',
+  tag: 'v0.6.0-preview.5',
   preview: true,
   repository: 'https://github.com/mduppes/TokenTracking',
   minimumMacOS: '13',

@@ -14,6 +14,15 @@ let suite = "io.tokentracking.test.\\(UUID().uuidString)"
 let store = UserDefaults(suiteName: suite)!
 defer { store.removePersistentDomain(forName: suite) }
 precondition(MenuBarPreferences.load(from: store) == .defaults)
+precondition(SetupService.menuIDs(for: ["cursor", "gemini", "unknown"]) == ["cursor", "grok-bot", "gemini"])
+var setupPrefs = MenuBarPreferences.defaults
+setupPrefs.selectProviders(["cursor", "gemini"], previous: [], firstSetup: true)
+precondition(Set(setupPrefs.visibleIDs) == ["cursor", "grok-bot", "gemini"])
+setupPrefs.hidden.insert("grok-bot")
+setupPrefs.meterIDs["cursor"] = "total"
+setupPrefs.selectProviders(["cursor", "claude"], previous: ["cursor", "gemini"], firstSetup: false)
+precondition(Set(setupPrefs.visibleIDs) == ["cursor", "claude"])
+precondition(setupPrefs.meterIDs["cursor"] == "total")
 var prefs = MenuBarPreferences.defaults
 prefs.move("muse", to: "claude")
 precondition(prefs.visibleIDs.first == "muse")
@@ -47,7 +56,7 @@ precondition(MenuBarPreferences.load(from: store) == .defaults)
 print("Preferences passed")
 `);
     const binary = join(dir, 'preferences-test');
-    execFileSync('swiftc', ['-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macos13.0`, '-module-cache-path', join(dir, 'module-cache'), resolve('menubar/MenuBarPreferences.swift'), main, '-o', binary], { timeout: 120_000 });
+    execFileSync('swiftc', ['-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macos13.0`, '-module-cache-path', join(dir, 'module-cache'), resolve('menubar/SetupServices.swift'), resolve('menubar/MenuBarPreferences.swift'), main, '-o', binary], { timeout: 120_000 });
     assert.match(execFileSync(binary, { encoding: 'utf8', timeout: 10_000 }), /Preferences passed/);
   } finally {
     rmSync(dir, { recursive: true, force: true });

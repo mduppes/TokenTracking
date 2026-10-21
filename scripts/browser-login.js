@@ -2,9 +2,14 @@
 // to each service. Headless refreshes reuse these logins. Quit that Chrome window (Cmd+Q) when done.
 // Usage: npm run browser-login [-- muse gemini openai]   (the dashboard's "Log in" buttons do the same)
 import { loadConfig } from '../server/src/config.js';
-import { openLoginWindow } from '../server/src/headless/login.js';
+import { openLoginWindow, LOGIN_URLS } from '../server/src/headless/login.js';
+import { updateSetup } from '../server/src/setup.js';
 
-const r = openLoginWindow(loadConfig(), process.argv.slice(2));
+const config = loadConfig();
+const providers = process.argv.slice(2);
+const selected = providers.length ? providers.filter((id) => Object.hasOwn(LOGIN_URLS, id)) : Object.keys(LOGIN_URLS);
+if (selected.length) updateSetup(config, { selectedProviders: [...new Set([...config.setup.selectedProviders, ...selected])], completed: true });
+const r = await openLoginWindow(config, providers);
 if (!r.ok) { console.log(r.reason); process.exit(1); }
 console.log(`Opened a TokenTracking Chrome window.
 1. Log in on each tab.

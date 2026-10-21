@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { loadConfig } from '../server/src/config.js';
 import { openDb } from '../server/src/db.js';
 import { createApp } from '../server/src/server.js';
+import { SETUP_PROVIDER_IDS, updateSetup } from '../server/src/setup.js';
 
 let server, db, home, port, refreshCalls = 0;
 let refreshOutcome = { at: 'now', results: {} };
@@ -14,6 +15,7 @@ let refreshOutcome = { at: 'now', results: {} };
 before(async () => {
   home = mkdtempSync(join(tmpdir(), 'tt-test-'));
   const config = loadConfig({ TOKENTRACKING_HOME: home, TOKENTRACKING_HEADLESS: '0' });
+  updateSetup(config, { selectedProviders: SETUP_PROVIDER_IDS, completed: true });
   db = openDb(config.dbPath);
   // Find a free port, then start for real with that port in the Host allow-list.
   const probe = createApp({ db, config });

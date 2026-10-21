@@ -52,7 +52,7 @@ final class ServiceRunner {
 // AppKit status item + popover (rather than SwiftUI MenuBarExtra, whose icon+text label can render
 // empty on some macOS versions). The panel content is still SwiftUI.
 @main
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var model: StatusModel!
@@ -82,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.contentViewController = NSHostingController(rootView: PanelView(model: model))
             updateButton()
             observer = model.objectWillChange.sink { [weak self] _ in
-                DispatchQueue.main.async { MainActor.assumeIsolated { self?.updateButton() } }
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.updateButton(); self?.syncSetupWindow() } }
             }
             // macOS silently hides menu bar items when the bar is full (notch) or when the app isn't
             // allowed in System Settings → Menu Bar (new apps start disallowed on recent macOS).
@@ -94,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var fallbackWindow: NSWindow?
+    private var setupWindow: NSWindow?
     private var hasEverBeenVisible = false
     private var hiddenCheckCount = 0
 
@@ -121,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor private func checkVisible() {
+        if model.setupRequested { return } // the explicit setup window owns focus and Dock visibility
         let visible = statusItem.button?.window?.occlusionState.contains(.visible) ?? false
         if visible {
             hasEverBeenVisible = true
@@ -152,6 +154,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @MainActor private func syncSetupWindow() {
+        if model.setupRequested {
+            if setupWindow == nil {
+                let window = NSWindow(contentViewController: NSHostingController(rootView: SetupView(model: model)))
+                window.title = "Set up TokenTracking"
+                window.styleMask = [.titled, .closable, .miniaturizable]
+                window.isReleasedWhenClosed = false
+                window.delegate = self
+                window.setContentSize(NSSize(width: 580, height: 660))
+                window.center()
+                setupWindow = window
+            }
+            if setupWindow?.isVisible != true {
+                popover.performClose(nil)
+                NSApp.setActivationPolicy(.regular)
+                setupWindow?.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        } else if let window = setupWindow {
+            setupWindow = nil
+            window.close()
+            if !model.menuBarHidden { NSApp.setActivationPolicy(.accessory) }
+        }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            guard let window = notification.object as? NSWindow, window === setupWindow else { return }
+            setupWindow = nil
+            model.setupRequested = false
+            if !model.menuBarHidden { NSApp.setActivationPolicy(.accessory) }
+        }
+    }
+
     @MainActor private func showWindow() {
         if fallbackWindow == nil {
             let w = NSWindow(contentViewController: NSHostingController(rootView: PanelView(model: model)))
@@ -169,7 +205,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Clicking the Dock icon (fallback mode) reopens the window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        MainActor.assumeIsolated { showWindow() }
+        MainActor.assumeIsolated {
+            if model.setupRequested { setupWindow?.makeKeyAndOrderFront(nil) } else { showWindow() }
+        }
         return true
     }
 
@@ -373,6 +411,7 @@ struct Status: Decodable {
     let notices: [Notice]
     let resetsNext: [Reset]
     let refreshMessage: String?
+    let setup: ServiceSetup?
 }
 
 /// ISO-8601 with or without fractional seconds (the service sends milliseconds).
@@ -412,6 +451,13 @@ final class StatusModel: ObservableObject {
     /// dashboard, but after the Mac slept it often drew nothing at all, even when recreated: 2026-10-11.)
     @Published var status: Status?
     @Published var loginNote: [String: String] = [:]
+    @Published var setup: ServiceSetup?
+    @Published var setupRequested = false
+    @Published var setupSaving = false
+    @Published var setupError: String?
+    @Published var openingProvider: String?
+    @Published var loginBrowserOpen = false
+    private var offeredSetup = false
 
     private var timer: Timer?
 
@@ -433,6 +479,12 @@ final class StatusModel: ObservableObject {
                 let (data, _) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("api/status"))
                 let s = try JSONDecoder().decode(Status.self, from: data)
                 status = s
+                setup = s.setup
+                loginBrowserOpen = s.setup?.browserOpen ?? false
+                if s.setup?.needsSetup == true && !offeredSetup {
+                    offeredSetup = true
+                    setupRequested = true
+                }
                 apply(s)
                 reachable = true
             } catch {
@@ -456,6 +508,9 @@ final class StatusModel: ObservableObject {
 
     func restoreDefaults() {
         preferences = .defaults
+        if let setup {
+            preferences.hidden.formUnion(Set(MenuBarPreferences.serviceIDs).subtracting(SetupService.menuIDs(for: Set(setup.selectedProviders))))
+        }
         preferencesChanged()
     }
 
@@ -526,6 +581,37 @@ final class StatusModel: ObservableObject {
 
     func panelOpened() { poll() }
 
+    func beginSetup() {
+        offeredSetup = true
+        setupError = nil
+        setupRequested = true
+        poll()
+    }
+
+    func saveSetup(_ providers: Set<String>, finish: Bool = false) async -> Bool {
+        setupSaving = true
+        setupError = nil
+        defer { setupSaving = false }
+        let previous = setup
+        do {
+            let payload = try JSONSerialization.data(withJSONObject: ["selectedProviders": providers.sorted(), "completed": finish || previous?.completed == true])
+            let (data, res) = try await post("api/setup", body: String(decoding: payload, as: UTF8.self), timeout: 10)
+            guard (res as? HTTPURLResponse)?.statusCode == 200 else {
+                setupError = "Could not save your services. Try again."
+                return false
+            }
+            setup = try JSONDecoder().decode(ServiceSetup.self, from: data)
+            preferences.selectProviders(providers, previous: Set(previous?.selectedProviders ?? []), firstSetup: previous?.completed != true)
+            preferencesChanged()
+            if finish { setupRequested = false }
+            poll()
+            return true
+        } catch {
+            setupError = "The service isn't reachable. Your choices haven't been saved."
+            return false
+        }
+    }
+
     func refreshNow() async {
         refreshing = true
         refreshError = nil
@@ -539,12 +625,17 @@ final class StatusModel: ObservableObject {
 
     /// Opens the TokenTracking browser on a provider's login page (POST /api/login).
     func logIn(_ provider: String) async {
+        guard openingProvider == nil && !loginBrowserOpen else { return }
+        openingProvider = provider
+        defer { openingProvider = nil }
         loginNote[provider] = "Opening…"
         do {
             let (data, res) = try await post("api/login", body: "{\"provider\":\"\(provider)\"}", timeout: 10)
             let ok = (res as? HTTPURLResponse)?.statusCode == 200
             let reason = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["reason"] as? String
             loginNote[provider] = ok ? "Check your login, then quit that window (⌘Q). It refreshes automatically." : (reason ?? "Couldn't open the browser.")
+            if ok { loginBrowserOpen = true }
+            poll()
         } catch { loginNote[provider] = "The service isn't reachable." }
     }
 
@@ -611,6 +702,9 @@ struct PanelView: View {
             } else if let s = model.status {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
+                        if model.setup?.needsSetup == true {
+                            Button("Finish setting up TokenTracking") { model.beginSetup() }
+                        }
                         notices(s)
                         resetsNext(s)
                         if let message = model.refreshError ?? s.refreshMessage { Text(message).font(.callout).foregroundStyle(.orange) }
@@ -730,6 +824,7 @@ struct MenuBarEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            Button { model.beginSetup() } label: { Label("Service setup & privacy…", systemImage: "person.crop.circle.badge.checkmark") }
             Text("Check the services to show. Drag a row or use the arrows to reorder. Changes save automatically.")
                 .font(.callout).foregroundStyle(.secondary)
             ZStack(alignment: .topLeading) {
@@ -755,7 +850,7 @@ struct MenuBarEditor: View {
             }
             .coordinateSpace(name: "serviceRows")
             .onPreferenceChange(ServiceRowFrames.self) { rowFrames = $0 }
-            Text("Hidden services still refresh and appear in the dashboard.")
+            Text("Hiding a menu item doesn't stop collection. Choose collected services in Service setup.")
                 .font(.caption).foregroundStyle(.secondary)
             Button("Restore defaults") { model.restoreDefaults() }
         }
@@ -807,6 +902,7 @@ struct MenuBarEditor: View {
                     }
                 }
                 .toggleStyle(.checkbox)
+                .disabled(model.setup.map { !SetupService.menuIDs(for: Set($0.selectedProviders)).contains(id) } ?? false)
                 Spacer()
                 Button {
                     model.moveService(id, to: order[index - 1])
@@ -916,5 +1012,232 @@ struct MeterRow: View {
             .background(Capsule().fill(color.opacity(0.18)))
             .foregroundStyle(color)
             .help(date.map { "Resets \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "Reset time unknown")
+    }
+}
+
+// MARK: - First-run setup (a persistent window, so browser sign-in does not dismiss it)
+
+@MainActor
+struct SetupView: View {
+    @ObservedObject var model: StatusModel
+    @State private var step = 0
+    @State private var selected: Set<String>
+    private let steps = ["How it works", "Services", "Sign in", "Ready"]
+
+    init(model: StatusModel) {
+        self.model = model
+        _selected = State(initialValue: Set(model.setup?.selectedProviders ?? []))
+    }
+
+    private var services: [SetupService] { SetupService.all.filter { selected.contains($0.id) } }
+    private var hasBrowserServices: Bool { services.contains { $0.needsBrowser } }
+    private var browserBusy: Bool { model.loginBrowserOpen || model.openingProvider != nil || model.setup?.refreshing == true || model.refreshing }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image(systemName: "gauge.with.dots.needle.50percent").font(.title2).foregroundStyle(.green)
+                    Text("Set up TokenTracking").font(.title3.weight(.semibold))
+                    Spacer()
+                    Text("\(step + 1) of 4").font(.caption).foregroundStyle(.secondary)
+                }
+                HStack(spacing: 6) {
+                    ForEach(Array(steps.enumerated()), id: \.offset) { index, label in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Capsule().fill(index <= step ? Color.accentColor : Color.primary.opacity(0.1)).frame(height: 3)
+                            Text(label).font(.caption2).foregroundStyle(index == step ? Color.primary : .secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }.padding(22)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    switch step {
+                    case 0: introduction
+                    case 1: serviceSelection
+                    case 2: connections
+                    default: completion
+                    }
+                }
+                .padding(22)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let error = model.setupError {
+                Text(error).font(.callout).foregroundStyle(.red).padding(.horizontal, 22).padding(.bottom, 10)
+            }
+            Divider()
+            HStack {
+                if step > 0 {
+                    Button("Back") { model.setupError = nil; step -= 1 }.disabled(model.setupSaving)
+                } else {
+                    Button("Set up later") { model.setupRequested = false }
+                }
+                Spacer()
+                if model.setupSaving { ProgressView().controlSize(.small) }
+                Button(step == 3 ? "Finish setup" : "Continue") {
+                    Task {
+                        if step == 1 {
+                            if await model.saveSetup(selected) { step = 2 }
+                        } else if step == 3 {
+                            _ = await model.saveSetup(selected, finish: true)
+                        } else { step += 1 }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.setupSaving || model.setup == nil || (step > 0 && selected.isEmpty))
+            }.padding(18)
+        }
+        .frame(width: 580, height: 660)
+        .task {
+            while !Task.isCancelled {
+                model.poll()
+                do { try await Task.sleep(nanoseconds: 3_000_000_000) } catch { break }
+            }
+        }
+    }
+
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Your AI limits, in one place").font(.title2.weight(.semibold))
+            Text("Choose your services, sign in once, and see usage and reset times in your menu bar.")
+                .font(.callout).foregroundStyle(.secondary)
+            explanation("eye", "Read-only usage checks", "About every 15 minutes, TokenTracking opens an invisible browser, reads your usage pages, then closes it. It doesn't send messages or change your provider settings.")
+            explanation("lock.shield", "Your data stays on this Mac", "Usage history is stored locally. There is no TokenTracking account, telemetry or cloud sync. The browser connects directly to the providers you select.")
+            explanation("person.crop.circle.badge.checkmark", "Sign in directly with your providers", "A separate Chrome profile keeps these sign-ins apart from your everyday browsing. Logins stay inside Chrome; TokenTracking does not read passwords or cookies. No API keys are needed.")
+            Label("Only Google Chrome needs to be installed. Everything else is included.", systemImage: "checkmark.circle")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var serviceSelection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Which services do you use?").font(.title2.weight(.semibold))
+            Text("Only selected services will be checked. You can change this later in Service setup.")
+                .font(.callout).foregroundStyle(.secondary)
+            ForEach(SetupService.all) { service in
+                Toggle(isOn: Binding(get: { selected.contains(service.id) }, set: { enabled in
+                    if enabled { selected.insert(service.id) } else { selected.remove(service.id) }
+                })) {
+                    HStack(spacing: 10) {
+                        serviceIcon(service.id)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(service.name).font(.callout.weight(.semibold))
+                            Text(service.detail).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }.padding(.vertical, 4)
+                }
+                .toggleStyle(.checkbox)
+                .padding(9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.04)))
+            }
+            if selected.isEmpty { Text("Select at least one service to continue.").font(.caption).foregroundStyle(.secondary) }
+        }
+    }
+
+    private var connections: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Connect your services").font(.title2.weight(.semibold))
+            if hasBrowserServices {
+                Text("Select Open browser and sign in. Then quit the dedicated Chrome window with ⌘Q so TokenTracking can read your limits. Your regular Chrome sign-ins aren't shared.")
+                    .font(.callout).foregroundStyle(.secondary)
+                if model.setup?.chromeAvailable != true { missingChrome }
+                if model.loginBrowserOpen {
+                    Label("Finish signing in, then quit that Chrome window with ⌘Q. Other sign-in buttons will become available when it closes.", systemImage: "globe")
+                        .font(.callout).padding(12)
+                        .background(RoundedRectangle(cornerRadius: 9).fill(Color.blue.opacity(0.1)))
+                } else if model.setup?.refreshing == true {
+                    Label("Checking usage… This can take a few minutes.", systemImage: "arrow.clockwise").font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            ForEach(services) { service in
+                HStack(alignment: .top, spacing: 10) {
+                    serviceIcon(service.id)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(service.name).font(.callout.weight(.semibold))
+                        Text(connectionText(service)).font(.caption).foregroundStyle(hasReading(service.id) ? Color.green : .secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if !hasReading(service.id), let note = model.loginNote[service.id] {
+                            Text(note).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Spacer(minLength: 8)
+                    Button(service.needsBrowser ? "Open browser" : "Check usage") {
+                        Task {
+                            if service.needsBrowser { await model.logIn(service.id) }
+                            else { await model.refreshNow() }
+                        }
+                    }
+                    .controlSize(.small)
+                    .disabled(browserBusy || !model.reachable || (service.needsBrowser && model.setup?.chromeAvailable != true))
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.04)))
+            }
+            Text("You can continue now and connect any remaining services later. A login is only confirmed when a usage reading is received.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var completion: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Label("Ready for your menu bar", systemImage: "checkmark.circle.fill").font(.title2.weight(.semibold)).foregroundStyle(.green)
+            let connected = services.filter { hasReading($0.id) }.count
+            Text("\(services.count) services selected · \(connected) with current usage readings").font(.callout)
+            if connected < services.count {
+                Text("Some services don't have a reading yet. Reopen Service setup from Settings to sign in or check them later.")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            explanation("menubar.rectangle", "Find your service icons", "The number is usage consumed. A reset countdown appears when a limit is reached; ?? means no reading yet.")
+            explanation("slider.horizontal.3", "Make the menu bar yours", "Use Settings to reorder items or choose which limit each item shows. Your choices are saved on this Mac.")
+            explanation("lock.shield", "No extra access needed", "App Management permission is not required. Keep your history and sign-ins local; no API keys or browser extension are needed.")
+            Button("Open Menu Bar settings") {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
+            }
+            Text("Use this if TokenTracking's icon is hidden. The setup window closes when you finish; collection continues in the background.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var missingChrome: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label("Google Chrome is required for browser services", systemImage: "exclamationmark.triangle").font(.callout.weight(.semibold))
+            Text("Install Chrome, then select Check again. Antigravity doesn't need Chrome.").font(.caption)
+            HStack {
+                Button("Get Google Chrome") { NSWorkspace.shared.open(URL(string: "https://www.google.com/chrome/")!) }
+                Button("Check again") { model.poll() }
+            }
+        }.padding(12).background(RoundedRectangle(cornerRadius: 9).fill(Color.orange.opacity(0.12)))
+    }
+
+    private func hasReading(_ id: String) -> Bool {
+        model.status?.providers.first(where: { $0.id == id })?.meters.contains(where: { !$0.stale }) == true
+    }
+
+    private func connectionText(_ service: SetupService) -> String {
+        if hasReading(service.id) { return "Usage received" }
+        if let notice = model.status?.notices.first(where: { $0.provider == service.id }) { return notice.text }
+        if !service.needsBrowser { return "Open Antigravity, then select Check usage." }
+        return "No current usage reading yet"
+    }
+
+    private func serviceIcon(_ id: String) -> some View {
+        Group {
+            if let icon = MenuBarGlyphs.icon(for: id, size: 22) {
+                Image(nsImage: icon).renderingMode(.template)
+            } else { Image(systemName: "app") }
+        }.frame(width: 24, height: 26)
+    }
+
+    private func explanation(_ symbol: String, _ title: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: symbol).font(.title3).foregroundStyle(.green).frame(width: 26)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.callout.weight(.semibold))
+                Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }

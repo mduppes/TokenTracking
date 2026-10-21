@@ -4,7 +4,7 @@ Ordered by priority. Move items to CHANGELOG.md when they ship.
 
 ## Next
 - [ ] **Muse live warmup verification:** the user’s 2026-10-14 screenshot confirms “is warming up”, which the old connection check missed. The reader now waits up to three minutes for warmup and Settings usage, with simulated-time and real-Chrome fixture coverage. Monitor whether live warmups need a longer allowance; expired notices remain rejected.
-- [x] **Website rollout:** public Sites deployment at https://tokentracking.truedog2.chatgpt.site (2026-10-20). Preview.4 signed download links and README are synchronized; demo screenshots remain current.
+- [x] **Website rollout:** public Sites deployment at https://tokentracking.truedog2.chatgpt.site (2026-10-20). Preview.5 signed download links and README are synchronized; demo screenshots remain current.
 - [ ] **Mac distribution:** preview.3 is Developer ID signed and Apple-notarized. Before promoting to stable, verify first-launch Gatekeeper, browser login and menu bar permissions on fresh Apple Silicon and Intel Macs; Intel package is cross-compiled on Apple Silicon. See `docs/RELEASING.md`.
 - [x] **OpenAI:** verified meter layout against live signed-in session (2026-10-17). `scrape-dom.js` now reads visible headings when progress bar accessibility labels are generic ("Usage remaining") and ignores non-quota percentage headings in activity breakdown charts ("Weekly" 100%), with v5 schema migration and redacted fixture test.
 - [x] **Icons:** authentic brand vector icons for all providers across the macOS menu bar and dashboard (Claude, Cursor, Antigravity, Grok Bot, OpenAI, Muse, Gemini).
@@ -24,6 +24,7 @@ Candidates, to be checked for a usage page or local source first. Same rules as 
 - [ ] **Midjourney** (fast GPU hours), **ElevenLabs** (characters per month): non-LLM, but the same "pace a monthly quota" problem.
 
 ## Done
+- [x] Native first-run setup with opt-in service collection, privacy and login guidance, missing-Chrome recovery, pending states and reopening from Settings; isolated demo UI and API verification (2026-10-21).
 - [x] Add Open Graph and Twitter summary card image tags with the 512×512 app icon for link share previews (2026-10-20).
 - [x] Add a short personal note to the website support section explaining how donations help maintain the app (2026-10-20).
 - [x] Refine website visuals with icon rows, stronger contrast, screenshot framing and compact cards instead of literal bullets (2026-10-20).

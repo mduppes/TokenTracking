@@ -10,6 +10,7 @@ import { normalizeDomMeters } from '../../../lib/parse.js';
 import { readAntigravity } from '../local/antigravity.js';
 import { openAILoggedOut, readOpenAIUsage } from './openai.js';
 import { readMuseUsage } from './muse.js';
+import { providerEnabled } from '../setup.js';
 
 const SCRAPER_PATH = fileURLToPath(new URL('../../../lib/scrape-dom.js', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -122,7 +123,7 @@ export function runHeadlessRefresh(opts) {
 async function doRun({ db, config, only = null, log = () => {} }) {
   const at = new Date().toISOString();
   const results = {};
-  const wanted = (id) => (!only || only.includes(id)) && !config.headless.disabled.includes(id);
+  const wanted = (id) => (!only || only.includes(id)) && providerEnabled(config, id);
   const tasks = TASKS.filter((t) => wanted(t.id));
 
   // Local sources first: no Chrome needed (ADR-011).
@@ -142,7 +143,7 @@ async function doRun({ db, config, only = null, log = () => {} }) {
   if (!tasks.length) return save(config, { at, results }, only);
 
   if (!existsSync(config.headless.profileDir)) {
-    for (const t of tasks) results[t.id] = { status: 'login', message: 'no browser profile yet: run `npm run browser-login`' };
+    for (const t of tasks) results[t.id] = { status: 'login', message: 'Open the browser to sign in, then quit it with Cmd+Q.' };
     return save(config, { at, results }, only);
   }
   if (profileInUse(config.headless.profileDir)) {

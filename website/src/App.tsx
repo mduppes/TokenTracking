@@ -133,8 +133,8 @@ export default function App() {
         <h2>Setup</h2>
         <ol className="install-steps">
           <li><span>1</span><h3>Install</h3><p>Download the DMG. Drag TokenTracking to Applications and open it.</p></li>
-          <li><span>2</span><h3>Sign in</h3><p>Select <strong>Open browser</strong> for each service. Sign in, then quit that browser with <kbd>⌘Q</kbd>.</p></li>
-          <li><span>3</span><h3>Choose your services</h3><p>Select menu bar items in Settings. Enable TokenTracking in System Settings → Menu Bar if needed.</p></li>
+          <li><span>2</span><h3>Choose services</h3><p>The setup guide explains privacy and lets you choose what to track.</p></li>
+          <li><span>3</span><h3>Sign in</h3><p>Open each service from setup. Sign in, then quit that browser with <kbd>⌘Q</kbd>. No API keys needed.</p></li>
         </ol>
         <dl className="release-notes"><div><dt>Updates</dt><dd>Quit the app, then replace it in Applications. History and logins are preserved.</dd></div><div><dt>Preview</dt><dd>Provider changes may interrupt readings. Subscription limits only; no API billing or token counts.</dd></div></dl>
       </section>

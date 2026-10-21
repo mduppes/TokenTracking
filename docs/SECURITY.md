@@ -2,25 +2,26 @@
 
 ## Principles
 
-1. **Nothing leaves your machine.** The only network traffic is the headless browser visiting the four provider sites you use, plus local traffic on `127.0.0.1`. There is no telemetry, analytics or cloud sync.
+1. **Nothing leaves your machine.** The only network traffic is the headless browser visiting the provider sites you select, plus local traffic on `127.0.0.1`. There is no telemetry, analytics or cloud sync.
 2. **No secrets handled by our code** (one scoped exception, below). There are no API keys and no stored passwords. Your logins live inside a dedicated Chrome profile, and Chrome uses them. Our code never reads cookies or login tokens.
 3. **Read-only.** We only read usage. Nothing changes settings, sends messages or touches billing.
-4. **Minimal storage.** Only usage meters (label, %, reset time, plan name) are stored.
+4. **Minimal storage.** Usage history contains meters (label, %, reset time, plan name); local settings contain service choices and completion state.
 
 ## What data is touched
 
 | Data | Where | Retention |
 |---|---|---|
+| Setup choices (no credentials) | `~/.tokentracking/setup.json` | Until changed or deleted |
 | Usage meters | `~/.tokentracking/tokentracking.db` | Forever (append-only; delete the file to wipe) |
 | Last refresh result per provider (ok / login / error message) | `~/.tokentracking/headless-status.json` | Overwritten each run |
 | Provider logins (cookies) | `~/.tokentracking/browser-profile/` (a Chrome profile) | Until you log out or delete the folder |
 | Service log | `~/.tokentracking/service.log` | Grows; delete any time |
 
-File permissions: the data dir and profile are created `0700`; the DB and status file are `0600`.
+File permissions: the data dir and profile are created `0700`; the DB, status and setup files are `0600`.
 
 ## Headless refresher
 
-- **Separate profile.** A dedicated Chrome profile at `~/.tokentracking/browser-profile` holds the logins you make with `npm run browser-login`. It's a normal Chrome profile on disk, so protect it like your browser profile. To wipe it, delete the folder.
+- **Separate profile.** A dedicated Chrome profile at `~/.tokentracking/browser-profile` holds logins made through setup’s Open browser action (or `npm run browser-login` for source users). It's a normal Chrome profile on disk, so protect it like your browser profile. To wipe it, delete the folder.
 - **No network port.** Chrome is controlled over a **pipe** (`--remote-debugging-pipe`), not a debugging port, so no other process or website can attach to it.
 - **Short-lived.** Chrome runs only during a refresh (a few seconds per provider). It's then told to quit, and killed if it lingers.
 - **Read-only.** Pages are only read. The one click sequence (Muse) opens Settings.
@@ -33,12 +34,17 @@ File permissions: the data dir and profile are created `0700`; the DB and status
 - **TLS.** The server uses a self-signed certificate, so certificate verification is disabled for that localhost request only.
 - **Opting out.** Set `TOKENTRACKING_HEADLESS_SKIP=antigravity`.
 
+## Service choices
+
+Fresh installs collect nothing until services are selected in setup. Deselecting a service stops future checks; it does not erase existing history or Chrome logins. A check already underway may finish. Existing installations keep their enabled readers when upgrading; use Settings → Service setup & privacy to change them. Hiding a menu item only changes display. Invalid setup files enable no readers.
+
 ## Local service
 
 - Binds to **127.0.0.1 only**.
 - **DNS-rebinding guard.** Requests whose `Host` header isn't `127.0.0.1:<port>` or `localhost:<port>` are rejected (403).
 - **Origin check.** Requests carrying an `Origin` header must come from the dashboard itself (`http://127.0.0.1:<port>`). Any other website or browser extension gets 403, so web pages can't read your usage or trigger refreshes. Non-browser clients (the menu bar app, `curl`) send no Origin and are allowed, since they already run as you.
-- **Login trigger.** `POST /api/login` only accepts a known provider id and only opens that provider's fixed login URL in the TokenTracking browser. It sits behind the same Host/Origin gate as everything else.
+- **Setup preferences.** `POST /api/setup` requires JSON, supported service ids and at least one selected service when completing setup. It uses the same local request gates.
+- **Login trigger.** `POST /api/login` only accepts a known, selected provider id and only opens that provider's fixed login URL in the TokenTracking browser. It sits behind the same Host/Origin gate as everything else.
 - **Refresh trigger.** `POST /api/refresh` requires `application/json` (≤ 16 KB), which forces a CORS preflight for any cross-site attempt.
 - **Static files** are served only from `server/public/`, with path traversal blocked. The dashboard has a CSP of `default-src 'self'` and loads nothing from CDNs.
 - SQL uses prepared statements only.

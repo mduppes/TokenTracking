@@ -3,10 +3,12 @@
 import { rmSync } from 'node:fs';
 import { loadConfig } from '../server/src/config.js';
 import { openDb } from '../server/src/db.js';
+import { SETUP_PROVIDER_IDS, updateSetup } from '../server/src/setup.js';
 
 const home = process.env.TOKENTRACKING_DEMO_HOME || '.tokentracking-demo';
 rmSync(home, { recursive: true, force: true });
 const config = loadConfig({ TOKENTRACKING_HOME: home });
+updateSetup(config, { selectedProviders: SETUP_PROVIDER_IDS, completed: true });
 const db = openDb(config.dbPath);
 const now = Date.now();
 const H = 36e5;

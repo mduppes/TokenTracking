@@ -41,6 +41,17 @@ struct MenuBarPreferences: Codable, Equatable {
         order.insert(id, at: to)
     }
 
+    mutating func selectProviders(_ ids: Set<String>, previous: Set<String>, firstSetup: Bool) {
+        let slots = SetupService.menuIDs(for: ids)
+        if firstSetup {
+            hidden = Set(Self.serviceIDs).subtracting(slots)
+        } else {
+            let old = SetupService.menuIDs(for: previous)
+            hidden.formUnion(old.subtracting(slots))
+            hidden.subtract(slots.subtracting(old))
+        }
+    }
+
     static func load(from store: UserDefaults = .standard) -> Self {
         guard let data = store.data(forKey: storageKey),
               let saved = try? JSONDecoder().decode(Self.self, from: data) else { return defaults }

@@ -1,10 +1,13 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildStatus, withPresentation } from './status.js';
-import { lastHeadlessRun } from './headless/refresh.js';
+import { isRefreshing, lastHeadlessRun } from './headless/refresh.js';
 import { openLoginWindow, LOGIN_URLS } from './headless/login.js';
+import { profileInUse } from './headless/chrome.js';
+import { providerEnabled, updateSetup } from './setup.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_BODY = 16 * 1024;
@@ -13,6 +16,8 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 export function createApp({ db, config, refresh = null, schedule = null }) {
   const allowedHosts = new Set([`127.0.0.1:${config.port}`, `localhost:${config.port}`]);
   const selfOrigins = new Set([...allowedHosts].map((h) => `http://${h}`));
+  const setupInfo = () => ({ ...config.setup, needsSetup: !config.setup?.completed,
+    chromeAvailable: existsSync(config.headless.chromePath), browserOpen: profileInUse(config.headless.profileDir), refreshing: isRefreshing() });
 
   /** Security gate: see docs/SECURITY.md ("Local service"). */
   function checkRequest(req) {
@@ -40,14 +45,22 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     try {
       if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true });
+      if (req.method === 'GET' && url.pathname === '/api/setup') return send(200, setupInfo());
+      if (req.method === 'POST' && url.pathname === '/api/setup') {
+        updateSetup(config, await readJson(req));
+        return send(200, setupInfo());
+      }
       if (req.method === 'GET' && url.pathname === '/api/status') {
         // Stale = missed ~2 scheduled refreshes (at least 30 min).
         const staleAfterMs = Math.max(30, (config.headless?.intervalMin || 15) * 2.5) * 6e4;
         const headless = config.headless?.enabled
           ? { ...((await lastHeadlessRun(config)) || {}), nextAt: schedule?.nextAt ?? null, intervalMin: config.headless.intervalMin }
           : null;
-        const status = withPresentation(buildStatus(db, new Date(), { staleAfterMs }), headless, new Set(Object.keys(LOGIN_URLS)));
-        return send(200, { ...status, headless });
+        const raw = buildStatus(db, new Date(), { staleAfterMs });
+        raw.providers = raw.providers.filter((p) => providerEnabled(config, p.id));
+        if (headless?.results) headless.results = Object.fromEntries(Object.entries(headless.results).filter(([id]) => providerEnabled(config, id)));
+        const status = withPresentation(raw, headless, new Set(Object.keys(LOGIN_URLS).filter((id) => providerEnabled(config, id))));
+        return send(200, { ...status, headless, setup: setupInfo() });
       }
       if (req.method === 'POST' && url.pathname === '/api/refresh') {
         if (!refresh) return send(404, 'headless refresh disabled');
@@ -60,7 +73,8 @@ export function createApp({ db, config, refresh = null, schedule = null }) {
         const body = await readJson(req);
         const provider = typeof body?.provider === 'string' && Object.hasOwn(LOGIN_URLS, body.provider) ? body.provider : null;
         if (!provider) return send(400, 'unknown provider');
-        const r = openLoginWindow(config, [provider], () => refresh?.([provider])?.catch(() => {})); // refresh logs failures; keep the login-exit callback from rejecting unhandled
+        if (!providerEnabled(config, provider)) return send(409, { ok: false, reason: 'Choose this service in Service setup before signing in.' });
+        const r = await openLoginWindow(config, [provider], () => refresh?.([provider])?.catch(() => {})); // refresh logs failures; keep the login-exit callback from rejecting unhandled
         return send(r.ok ? 200 : 409, r);
       }
       if (req.method === 'GET' && !url.pathname.startsWith('/api/')) return serveStatic(url.pathname, send);

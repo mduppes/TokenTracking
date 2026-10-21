@@ -19,7 +19,7 @@ Run the relocated-service smoke check on an Intel Mac with the x64 app as well. 
 
 Without the signing environment variables below, these local preview packages have ad-hoc signatures, **without Developer ID or Apple notarization**. Clearly label this in the README and release notes. Downloaders may need to attempt launch, then approve it using System Settings → Privacy & Security → Open Anyway. Do not suggest disabling Gatekeeper or removing quarantine. Installation requires dragging the app into Applications; it is not a silent one-click installer.
 
-Use a prerelease tag matching `package.json` (currently `v0.6.0-preview.4`). Upload both DMGs and checksum files to a GitHub prerelease, using `gh release create --prerelease --notes-file <file>`. Keep the README download links in sync with the tag and filenames. Quit the installed app before replacing it; the data directory persists.
+Use a prerelease tag matching `package.json` (currently `v0.6.0-preview.5`). Upload both DMGs and checksum files to a GitHub prerelease, using `gh release create --prerelease --notes-file <file>`. Keep the README download links in sync with the tag and filenames. Quit the installed app before replacing it; the data directory persists.
 
 ## Reclaim local build space
 
@@ -51,4 +51,8 @@ The static landing page is separate from the release allow-list (ADR-013). Befor
 4. Keep user-facing feature descriptions focused on outcomes. Do not remove unsigned-preview installation guidance until Developer ID signing and notarization are verified.
 5. Run `npm run build --prefix website` and check desktop/mobile layouts before deploying `website/dist`.
 
-The linked `v0.6.0-preview.4` release fixes the unnecessary App Management request while retaining Developer ID signing and Apple notarization. Release notes are checked in at `docs/releases/0.6.0-preview.4.md`; publish them with both DMGs and their checksum files. The public website at https://tokentracking.truedog2.chatgpt.site must be redeployed when download metadata changes.
+The linked `v0.6.0-preview.5` release adds guided service setup and privacy/sign-in guidance while retaining Developer ID signing and Apple notarization. Release notes are checked in at `docs/releases/0.6.0-preview.5.md`; publish them with both DMGs and their checksum files. The public website at https://tokentracking.truedog2.chatgpt.site must be redeployed when download metadata changes.
+
+## First-run regression checks
+
+Use a disposable `TOKENTRACKING_HOME`, never the maintainer’s real profile. Confirm no collection before selection, disabled Continue with no selection, missing-Chrome guidance, pending connections, Cmd+Q guidance and setup completion. Reopen through Settings → Service setup & privacy. Quit/relaunch incomplete setup to resume, and verify a legacy database migrates without forcing the wizard. Check menu visibility separately from collection. Local UI checks on 2026-10-21 used an isolated app identity and synthetic Antigravity data; fresh-Mac and physical Intel validation remain pending.

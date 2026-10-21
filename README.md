@@ -47,19 +47,24 @@ No API keys, no TokenTracking account, no telemetry, no browser extension. Your 
 
 ## Download for Mac
 
-[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.4/TokenTracking-0.6.0-preview.4-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.4/TokenTracking-0.6.0-preview.4-x64.dmg)
+[**Download for Mac — Apple Silicon**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.5/TokenTracking-0.6.0-preview.5-arm64.dmg) · [**Intel Mac**](https://github.com/mduppes/TokenTracking/releases/download/v0.6.0-preview.5/TokenTracking-0.6.0-preview.5-x64.dmg)
 
 Requires **macOS 13+** and **Google Chrome**. Node and the local service are included; no terminal, Git or Xcode tools needed.
 
 1. Download the DMG for your Mac (Apple menu → About This Mac shows **Chip** for Apple Silicon, **Processor** for Intel).
 2. Open the DMG and drag **TokenTracking** to **Applications**. Launch it from Applications.
-3. Click **Open browser** on each provider you use, log in, then quit the dedicated Chrome window with **Cmd+Q**. That provider refreshes automatically. If needed, enable TokenTracking in **System Settings → Menu Bar**.
+3. Follow the setup window: choose your services, sign in with **Open browser**, then quit the dedicated Chrome window with **Cmd+Q**. Usage refreshes automatically. Antigravity only needs its desktop app running.
+4. Customize your menu items in Settings. Reopen **Service setup & privacy…** there to change collected services or reconnect later. If needed, enable TokenTracking in **System Settings → Menu Bar**.
+
+![Setup guide with service connections and Chrome help](docs/images/setup-guide.png)
+
+Fresh installs check no services until you choose them. The wizard explains read-only checks, local history and separate browser sign-ins. You can finish before every service has a reading; pending connections remain clearly marked. Upgrades preserve existing collection and do not force setup again.
 
 **Signed preview:** downloads are signed with Developer ID and notarized by Apple. macOS may ask you to confirm opening an app downloaded from the internet. See [release packaging](docs/RELEASING.md).
 
 To update, quit TokenTracking, replace the app in Applications, and reopen it. Your logins and history stay in `~/.tokentracking`. To uninstall, quit and remove the app; remove `~/.tokentracking` separately if you also want to delete its history and dedicated browser profile.
 
-The current GitHub download is **0.6.0-preview.4**, with the fix for Chrome’s unnecessary App Management request, Developer ID signing and Apple notarization. See the [release notes](docs/releases/0.6.0-preview.4.md).
+The current GitHub download is **0.6.0-preview.5**, with guided first-run setup, service selection and privacy guidance, Developer ID signing and Apple notarization. See the [release notes](docs/releases/0.6.0-preview.5.md).
 
 ## Build from source
 

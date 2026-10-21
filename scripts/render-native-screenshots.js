@@ -48,5 +48,5 @@ const config = join(workDir, 'BuildConfig.swift');
 writeFileSync(file, source);
 writeFileSync(config, 'enum BuildConfig { static let nodePath = "/unused"; static let projectDir = "/unused" }');
 const binary = join(appDir, 'Contents/MacOS/TokenTrackingDemo');
-execFileSync('swiftc', ['-parse-as-library', '-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macos13.0`, '-module-cache-path', join(workDir, 'module-cache'), 'menubar/MenuBarPreferences.swift', file, config, '-o', binary], { stdio: 'inherit' });
+execFileSync('swiftc', ['-parse-as-library', '-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macos13.0`, '-module-cache-path', join(workDir, 'module-cache'), 'menubar/SetupServices.swift', 'menubar/MenuBarPreferences.swift', file, config, '-o', binary], { stdio: 'inherit' });
 console.log('Native screenshot demo built: ' + appDir + '\nOpen this app and capture panel/Settings with computer-use tools or manually; never capture the production app.');

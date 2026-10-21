@@ -45,7 +45,15 @@ try {
     if (path === '/api/status') assert.ok(Array.isArray((await response.json()).providers));
     else await response.arrayBuffer();
   }
-  console.log('Packaged runtime, SQLite, status and dashboard work from a moved app with no external Node or checkout.');
+  const setup = await (await fetch(url + '/api/setup')).json();
+  assert.equal(setup.completed, false);
+  assert.deepEqual(setup.selectedProviders, []);
+  const saved = await fetch(url + '/api/setup', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ selectedProviders: ['antigravity'], completed: true }) });
+  assert.equal(saved.status, 200);
+  assert.equal((await saved.json()).completed, true);
+  assert.deepEqual((await (await fetch(url + '/api/setup')).json()).selectedProviders, ['antigravity']);
+  console.log('Packaged runtime, SQLite, setup and dashboard work from a moved app with no external Node or checkout.');
 } finally {
   if (child && child.exitCode === null) {
     child.kill('SIGTERM');

@@ -4,6 +4,15 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 
+## [0.6.0-preview.5] - 2026-10-21
+
+### Added
+- Native first-run setup: choose services, sign in directly in a separate Chrome profile, and learn about read-only checks and local data. Includes missing-Chrome help, Antigravity guidance, pending connection states and a Settings entry to reopen setup.
+- Fresh installs collect nothing until services are selected. Collection choices persist locally; existing installations retain their readers without being forced through setup. Menu visibility remains independently customizable.
+
+### Fixed
+- Missing or non-executable Chrome now returns a readable sign-in error instead of risking service termination.
+
 ### Changed
 - Added Open Graph and Twitter summary card image tags pointing to the 512×512 app icon, enabling rich link share previews across messaging and social platforms.
 - Humanized the website’s support section with a personal note from the developer and clearer context on how donations support ongoing maintenance.
