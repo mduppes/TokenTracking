@@ -4,6 +4,9 @@ All notable changes to this project are recorded here. Format: [Keep a Changelog
 
 ## [Unreleased]
 
+### Added
+- Website: cookieless Umami analytics (pageviews plus download, support, GitHub and release-notes clicks), loaded first-party through a Netlify rewrite. The app itself is unchanged.
+
 ## [0.6.0-preview.5] - 2026-10-21
 
 ### Added

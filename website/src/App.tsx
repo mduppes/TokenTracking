@@ -39,13 +39,13 @@ function SocialIcon({ kind }: { kind: 'github' | 'linkedin' }) {
 
 function DownloadButtons() {
   return <div className="downloads">
-    <a className="button button-primary" href={downloadURL('arm64')} target="_blank" rel="noopener noreferrer"><Arrow down /> Download for Apple Silicon</a>
-    <a className="button button-secondary" href={downloadURL('x64')} target="_blank" rel="noopener noreferrer">Intel Mac <Arrow down /></a>
+    <a className="button button-primary" href={downloadURL('arm64')} data-umami-event="tokentracking: download" data-umami-event-arch="arm64" target="_blank" rel="noopener noreferrer"><Arrow down /> Download for Apple Silicon</a>
+    <a className="button button-secondary" href={downloadURL('x64')} data-umami-event="tokentracking: download" data-umami-event-arch="x64" target="_blank" rel="noopener noreferrer">Intel Mac <Arrow down /></a>
   </div>;
 }
 
 function SupportLink({ className = '', label = 'Support the project' }: { className?: string; label?: string }) {
-  return <a className={`support-link ${className}`} href={supportURL} target="_blank" rel="noopener noreferrer">
+  return <a className={`support-link ${className}`} href={supportURL} data-umami-event="tokentracking: support" target="_blank" rel="noopener noreferrer">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
     {label}<span className="sr-only"> (opens Stripe in a new tab)</span>
   </a>;
@@ -59,7 +59,7 @@ export default function App() {
       <a href="#" className="brand"><img src="/images/icon.png" width="32" height="32" alt="" />TokenTracking</a>
       <nav aria-label="Main navigation" className="flex items-center gap-7">
         <a className="nav-link" href="#features">Features</a>
-        <a className="nav-link nav-social" href={release.repository} target="_blank" rel="noopener noreferrer"><SocialIcon kind="github" /><span className="social-label">GitHub</span></a>
+        <a className="nav-link nav-social" href={release.repository} data-umami-event="tokentracking: github" target="_blank" rel="noopener noreferrer"><SocialIcon kind="github" /><span className="social-label">GitHub</span></a>
         {creatorLinks.filter(({ icon }) => icon === 'linkedin').map(({ href }) => <a key={href} className="nav-link nav-social" href={href} target="_blank" rel="noopener noreferrer"><SocialIcon kind="linkedin" /><span className="social-label">LinkedIn</span></a>)}
         <SupportLink className="nav-support" label="Donate" />
       </nav>
@@ -77,7 +77,7 @@ export default function App() {
           <p className="download-caption">macOS {release.minimumMacOS}+ <span>·</span> Google Chrome required</p>
           <p className="download-caption">Free & open source <span>·</span> Signed & notarized</p>
           <a className="preview-link" href="#install">Setup instructions</a>
-          <a className="hero-release-link" href={releaseURL} target="_blank" rel="noopener noreferrer">Preview {release.version} · release notes & checksums ↗</a>
+          <a className="hero-release-link" href={releaseURL} data-umami-event="tokentracking: release-notes" target="_blank" rel="noopener noreferrer">Preview {release.version} · release notes & checksums ↗</a>
         </div>
         <div className="hero-product" aria-label="TokenTracking screenshots with demo data">
           <div className="menu-strip"><span className="menu-app">TokenTracking</span><div className="menu-crop"><img src="/images/menubar.png" alt="Menu bar with provider icons and usage percentages" /></div></div>
@@ -144,6 +144,6 @@ export default function App() {
         <div className="support-section-action"><SupportLink className="button button-primary" label="Support on Stripe" /><span>One-time tip · Stripe checkout</span></div>
       </section>
     </main>
-    <footer className="site-footer page-width"><div className="footer-main"><a className="brand" href="#"><img src="/images/icon.png" width="28" height="28" alt="" />TokenTracking</a><div><SupportLink /><a className="social-link" href={release.repository} target="_blank" rel="noopener noreferrer"><SocialIcon kind="github" />Source code</a><a href={`${release.repository}/blob/main/README.md`} target="_blank" rel="noopener noreferrer">Documentation</a><a href={`${release.repository}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">MIT license</a></div></div><div className="creator-links"><span>Creator</span>{creatorLinks.map(({ label, href, icon }) => <a key={label} href={href} target="_blank" rel="noopener noreferrer">{icon && <SocialIcon kind={icon} />}{label} <span aria-hidden="true">↗</span></a>)}</div><p>Independent project. Not affiliated with the providers shown. Trademarks belong to their owners.</p></footer>
+    <footer className="site-footer page-width"><div className="footer-main"><a className="brand" href="#"><img src="/images/icon.png" width="28" height="28" alt="" />TokenTracking</a><div><SupportLink /><a className="social-link" href={release.repository} data-umami-event="tokentracking: github" target="_blank" rel="noopener noreferrer"><SocialIcon kind="github" />Source code</a><a href={`${release.repository}/blob/main/README.md`} target="_blank" rel="noopener noreferrer">Documentation</a><a href={`${release.repository}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">MIT license</a></div></div><div className="creator-links"><span>Creator</span>{creatorLinks.map(({ label, href, icon }) => <a key={label} href={href} target="_blank" rel="noopener noreferrer">{icon && <SocialIcon kind={icon} />}{label} <span aria-hidden="true">↗</span></a>)}</div><p>Independent project. Not affiliated with the providers shown. Trademarks belong to their owners.</p></footer>
   </>;
 }
